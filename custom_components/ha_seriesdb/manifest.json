@@ -1,12 +1,12 @@
 {
   "domain": "ha_seriesdb",
   "name": "HA SeriesDB",
-  "codeowners": [],
+  "codeowners": ["@charly166"],
   "config_flow": true,
-  "documentation": "https://developer.themoviedb.org/reference/intro/getting-started",
+  "documentation": "https://github.com/charly166/ha-seriesdb",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "issue_tracker": "",
+  "issue_tracker": "https://github.com/charly166/ha-seriesdb/issues",
   "requirements": [],
   "version": "1.0.0"
 }

@@ -16,6 +16,7 @@ from .const import CONF_API_KEY, DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_SCHEMA = vol.Schema({vol.Required(CONF_API_KEY): str})
+TMDB_API_KEY_URL = "https://www.themoviedb.org/settings/api"
 
 
 async def _validate(hass: HomeAssistant, api_key: str) -> None:
@@ -47,5 +48,8 @@ class TMDBConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
 
         return self.async_show_form(
-            step_id="user", data_schema=STEP_USER_SCHEMA, errors=errors
+            step_id="user",
+            data_schema=STEP_USER_SCHEMA,
+            errors=errors,
+            description_placeholders={"url": TMDB_API_KEY_URL},
         )

@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "HA SeriesDB",
-        "description": "Gib deinen kostenlosen themoviedb.org (TMDB) API-Key ein (zu erstellen unter https://www.themoviedb.org/settings/api).",
+        "description": "Gib deinen kostenlosen themoviedb.org (TMDB) API-Key ein. Du kannst ihn unter {url} erstellen.",
         "data": {
           "api_key": "API-Key"
         }

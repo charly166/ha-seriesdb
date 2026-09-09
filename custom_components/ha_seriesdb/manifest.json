@@ -3,6 +3,7 @@
   "name": "HA SeriesDB",
   "codeowners": ["@charly166"],
   "config_flow": true,
+  "dependencies": ["http"],
   "documentation": "https://github.com/charly166/ha-seriesdb",
   "integration_type": "service",
   "iot_class": "cloud_polling",

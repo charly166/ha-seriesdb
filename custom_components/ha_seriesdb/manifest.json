@@ -1,0 +1,12 @@
+{
+  "domain": "ha_seriesdb",
+  "name": "HA SeriesDB",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://developer.themoviedb.org/reference/intro/getting-started",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "",
+  "requirements": [],
+  "version": "1.0.0"
+}

@@ -1,0 +1,112 @@
+add_series:
+  name: Serie hinzufügen
+  description: Fügt eine Serie anhand ihrer TMDB-ID zur Watchlist hinzu.
+  fields:
+    series_id:
+      name: Serien-ID
+      description: Die numerische TMDB-ID der Serie (z.B. aus der Suche in der Karte).
+      required: true
+      example: "121361"
+      selector:
+        text:
+
+remove_series:
+  name: Serie entfernen
+  description: Entfernt eine Serie samt Sehstatus aus der Watchlist.
+  fields:
+    series_id:
+      name: Serien-ID
+      description: Die TMDB-ID der zu entfernenden Serie.
+      required: true
+      example: "121361"
+      selector:
+        text:
+
+mark_episode_watched:
+  name: Episode als gesehen markieren
+  description: Markiert eine einzelne Episode als gesehen.
+  fields:
+    series_id:
+      name: Serien-ID
+      required: true
+      selector:
+        text:
+    episode_id:
+      name: Episoden-ID
+      required: true
+      selector:
+        text:
+
+mark_episode_unwatched:
+  name: Episode als ungesehen markieren
+  description: Entfernt die "gesehen"-Markierung einer Episode.
+  fields:
+    series_id:
+      name: Serien-ID
+      required: true
+      selector:
+        text:
+    episode_id:
+      name: Episoden-ID
+      required: true
+      selector:
+        text:
+
+mark_season_watched:
+  name: Staffel markieren
+  description: Markiert eine komplette Staffel als gesehen oder ungesehen.
+  fields:
+    series_id:
+      name: Serien-ID
+      required: true
+      selector:
+        text:
+    season_number:
+      name: Staffelnummer
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 200
+    watched:
+      name: Gesehen
+      description: true = als gesehen markieren, false = Markierung entfernen.
+      default: true
+      selector:
+        boolean:
+
+mark_watched_up_to:
+  name: Bis hierhin als gesehen markieren
+  description: Markiert eine Episode sowie alle vorherigen (nach Staffel/Episode) als gesehen.
+  fields:
+    series_id:
+      name: Serien-ID
+      required: true
+      selector:
+        text:
+    episode_id:
+      name: Episoden-ID
+      description: Die Episode, bis zu der (inklusive) alles als gesehen markiert werden soll.
+      required: true
+      selector:
+        text:
+
+refresh:
+  name: Aktualisieren
+  description: Ruft sofort neue Episoden für alle verfolgten Serien von themoviedb.org ab.
+
+set_archived:
+  name: Archivstatus setzen
+  description: Verschiebt eine Serie ins Archiv oder holt sie wieder zurück.
+  fields:
+    series_id:
+      name: Serien-ID
+      required: true
+      selector:
+        text:
+    archived:
+      name: Archiviert
+      description: true = archivieren, false = aus dem Archiv zurückholen.
+      default: true
+      selector:
+        boolean:

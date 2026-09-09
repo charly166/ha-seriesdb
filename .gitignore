@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+
+# Home Assistant Laufzeitdaten (falls das Repo versehentlich im config-Ordner liegt)
+.storage/
+secrets.yaml
+
+# Eigener TMDB-Attributions-Logo-Platzhalter (Nutzer legt eigene Kopie ab,
+# siehe README "Rechtliches: TMDB-Attribution & Lizenz")
+custom_components/ha_seriesdb/www/tmdb-logo.svg
+custom_components/ha_seriesdb/www/tmdb-logo.png
+
+# OS/Editor
+.DS_Store
+*.swp

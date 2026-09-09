@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HA SeriesDB",
+        "description": "Gib deinen kostenlosen themoviedb.org (TMDB) API-Key ein (zu erstellen unter https://www.themoviedb.org/settings/api).",
+        "data": {
+          "api_key": "API-Key"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Der API-Key wurde von themoviedb.org abgelehnt.",
+      "cannot_connect": "Verbindung zu themoviedb.org nicht möglich."
+    },
+    "abort": {
+      "already_configured": "HA SeriesDB ist bereits eingerichtet."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "series_progress": {
+        "name": "Fortschritt"
+      }
+    }
+  }
+}

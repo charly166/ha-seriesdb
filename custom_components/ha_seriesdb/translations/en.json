@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HA SeriesDB",
+        "description": "Enter your free themoviedb.org (TMDB) API key (create one at https://www.themoviedb.org/settings/api).",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The API key was rejected by themoviedb.org.",
+      "cannot_connect": "Could not connect to themoviedb.org."
+    },
+    "abort": {
+      "already_configured": "HA SeriesDB is already configured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "series_progress": {
+        "name": "Progress"
+      }
+    }
+  }
+}

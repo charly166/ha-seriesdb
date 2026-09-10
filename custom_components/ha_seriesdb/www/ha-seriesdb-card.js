@@ -44,13 +44,26 @@ const STYLES = `
     --tmdb-watched: #4fb286;
     --tmdb-text: #eef0f5;
     --tmdb-text-muted: #8b93a7;
-    display: block;
+    display: flex;
+    flex-direction: column;
+    /* In einer Sections-Ansicht mit fester Zeilenzahl gibt die Rasterzelle
+       eine echte Pixelhöhe vor - height:100% füllt sie dann komplett aus.
+       Ohne eine solche Zelle (Masonry, "auto" Zeilen) hat der Elternknoten
+       keine definierte Höhe, wodurch height:100% laut CSS-Spezifikation zu
+       "auto" wird - die Karte wächst dann ganz normal mit ihrem Inhalt.
+       Dasselbe Verhalten nutzen z.B. auch weather-radar-card und
+       dynamic-weather-card. */
+    height: 100%;
     font-family: ${BODY_FONT};
     color: var(--tmdb-text);
   }
 
   .card {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
     background: var(--tmdb-bg);
     border-radius: 14px;
     overflow: hidden;
@@ -119,8 +132,19 @@ const STYLES = `
 
   .body {
     position: relative;
-    padding: 16px 20px 20px 20px;
+    flex: 1 1 auto;
     min-height: 120px;
+    /* Ohne begrenzenden Elternrahmen (Masonry/"auto"-Zeilen) verhindert
+       dieser Standardwert, dass unterschiedlich lange Listen (z.B. "Meine
+       Serien" vs. "Archiv") die Kartenhöhe und damit die Seitenhöhe
+       springen lassen. Sitzt die Karte in einer Sections-Zelle mit fester
+       Höhe, gewinnt stattdessen die tatsächlich zugewiesene, kleinere Höhe
+       (flex-Schrumpfen dank min-height:0 weiter unten) - die Karte füllt
+       dann exakt die zugewiesene Zelle aus, wie bei anderen Standard-Karten
+       üblich. */
+    max-height: 520px;
+    overflow-y: auto;
+    padding: 16px 20px 20px 20px;
   }
 
   .search-row {
@@ -194,8 +218,6 @@ const STYLES = `
   }
 
   .result-list {
-    max-height: 420px;
-    overflow-y: auto;
     padding-right: 4px;
   }
 
@@ -242,8 +264,6 @@ const STYLES = `
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 14px;
-    max-height: 480px;
-    overflow-y: auto;
     padding-right: 4px;
   }
 
@@ -435,14 +455,18 @@ class HaSeriesDbCard extends HTMLElement {
   }
 
   getGridOptions() {
-    // Erlaubt in der "Sections"-Ansicht das Anpassen der Kartenbreite per
-    // Ziehen am Rand im Dashboard-Editor. Standard: volle Breite (12 Spalten).
+    // Erlaubt in der "Sections"-Ansicht das Anpassen von Breite UND Höhe per
+    // Ziehen am Rand im Dashboard-Editor. Standard: volle Breite (12 Spalten),
+    // 8 Zeilen. Die Karte füllt dank height:100% in der CSS (siehe :host)
+    // tatsächlich die zugewiesene Zellenhöhe aus, anstatt nur mit ihrem
+    // Inhalt zu wachsen - wie bei anderen Standard-Karten üblich.
     return {
       columns: 12,
       rows: 8,
       min_columns: 6,
       max_columns: 12,
       min_rows: 4,
+      max_rows: 16,
     };
   }
 

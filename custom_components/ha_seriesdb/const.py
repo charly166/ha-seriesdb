@@ -12,12 +12,14 @@ TMDB_LANGUAGE = "de-DE"
 
 PLATFORMS = ["sensor"]
 
-# Wird bei jeder inhaltlichen Änderung der Karte hochgezählt und als
-# Query-Parameter an die JS-URL angehängt. Ohne das würden Browser (und die
-# HA-Frontend-eigene Service-Worker-Zwischenspeicherung) die alte Karten-Datei
-# unter derselben URL weiter ausliefern, bis man manuell einen Hard-Reload
-# macht.
-CARD_VERSION = "11"
+CARD_FILENAME = "ha-seriesdb-card.js"
+STATIC_BASE_PATH = f"/{DOMAIN}"
+
+# Wird bei jeder inhaltlichen Änderung der Karte hochgezählt. Die
+# Lovelace-Ressource wird automatisch auf diese Version aktualisiert (siehe
+# frontend.py) - ein manuelles Nachtragen der URL ist dadurch nicht mehr
+# nötig.
+CARD_VERSION = "12"
 
 STORAGE_VERSION = 1
 STORAGE_KEY = f"{DOMAIN}_data"

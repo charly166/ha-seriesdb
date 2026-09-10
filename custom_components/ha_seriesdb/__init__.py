@@ -7,7 +7,12 @@ from pathlib import Path
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import (
+    CoreState,
+    EVENT_HOMEASSISTANT_STARTED,
+    HomeAssistant,
+    ServiceCall,
+)
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -19,7 +24,6 @@ from .const import (
     ATTR_SEASON_NUMBER,
     ATTR_SERIES_ID,
     ATTR_WATCHED,
-    CARD_VERSION,
     CONF_API_KEY,
     DOMAIN,
     PLATFORMS,
@@ -33,16 +37,44 @@ from .const import (
     SERVICE_SET_ARCHIVED,
     SIGNAL_SERIES_ADDED,
     SIGNAL_SERIES_REMOVED,
+    STATIC_BASE_PATH,
 )
 from .coordinator import TMDBCoordinator
+from .frontend import LovelaceResourceRegistration
 from .store import TMDBStore
 from .websocket_api import async_register_commands
 
 _LOGGER = logging.getLogger(__name__)
 
-CARD_URL_PATH = f"/{DOMAIN}/ha-seriesdb-card.js?v={CARD_VERSION}"
 WWW_DIR = Path(__file__).parent / "www"
-STATIC_BASE_PATH = f"/{DOMAIN}"
+
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Globales, einmaliges Setup - unabhängig von Config Entries.
+
+    Die statische Auslieferung der Karte sowie ihre automatische
+    Registrierung als Lovelace-Ressource gehören hierher (nicht in
+    async_setup_entry): Sie müssen nur einmal pro laufender
+    Home-Assistant-Instanz passieren, unabhängig davon, ob/wie oft die
+    eigentliche Integration über die UI eingerichtet wird - und die
+    Lovelace-Ressourcenliste ist ohnehin erst verfügbar, nachdem Home
+    Assistant selbst vollständig gestartet ist.
+    """
+    from homeassistant.components.http import StaticPathConfig
+
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(STATIC_BASE_PATH, str(WWW_DIR), cache_headers=True)]
+    )
+
+    async def _register_resource(_event=None) -> None:
+        await LovelaceResourceRegistration(hass).async_register()
+
+    if hass.state == CoreState.running:
+        await _register_resource()
+    else:
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _register_resource)
+
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -69,10 +101,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinator": coordinator,
     }
 
-    # WebSocket-Befehle und Karte nur beim allerersten Setup registrieren.
+    # WebSocket-Befehle und Services nur beim allerersten Setup registrieren.
     if len(hass.data[DOMAIN]) == 1:
         async_register_commands(hass)
-        await _async_register_static_files(hass)
         _async_register_services(hass)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -86,40 +117,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-async def _async_register_static_files(hass: HomeAssistant) -> None:
-    """Stellt den www/-Ordner (Karte, Icon, TMDB-Logo) statisch bereit.
-
-    WICHTIG: Die Karte wird bewusst NICHT mehr automatisch per
-    `frontend.add_extra_js_url()` in jedes Dashboard eingehängt. Dieser
-    Mechanismus ist eigentlich für globale Zusatzskripte des Frontends
-    gedacht (z.B. Analytics-Snippets), nicht für Lovelace-Karten - und hat
-    sich in der Praxis als unzuverlässig erwiesen: Home Assistant versucht
-    teils schon, die Karte zu erzeugen, bevor das per add_extra_js_url
-    eingebundene Skript fertig geladen ist, ohne danach zuverlässig erneut
-    zu versuchen ("Konfigurationsfehler" trotz erfolgreich geladener Datei).
-
-    Stattdessen registriert sich die Karte wie praktisch jede andere
-    Custom Card im Home-Assistant-Ökosystem (auch alle über HACS
-    installierten) über die offizielle Lovelace-Ressourcenverwaltung unter
-    Einstellungen -> Dashboards -> Ressourcen. Dieser Weg ist eng mit dem
-    Dashboard-Ladevorgang selbst verzahnt und wartet dort korrekt auf das
-    Skript, statt nur ein generisches <script>-Tag unabhängig vom
-    Dashboard-Lebenszyklus in die Seite zu werfen.
-
-    Die Einrichtung dieser Ressource ist ein einmaliger, manueller Schritt
-    (siehe README) - dafür aber der zuverlässige, bewährte Weg.
-    """
-    from homeassistant.components.http import StaticPathConfig
-
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(STATIC_BASE_PATH, str(WWW_DIR), cache_headers=True)]
-    )
-    _LOGGER.info(
-        "HA SeriesDB: Bitte folgende URL einmalig manuell unter "
-        "Einstellungen -> Dashboards -> Ressourcen als 'JavaScript-Modul' "
-        "hinzufügen: %s",
-        CARD_URL_PATH,
-    )
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Wird aufgerufen, wenn die Integration vollständig entfernt wird (nicht
+    bei einem einfachen Neuladen). Entfernt in diesem Fall auch die
+    Lovelace-Ressource wieder, damit nichts verwaist zurückbleibt."""
+    if not hass.data.get(DOMAIN):
+        await LovelaceResourceRegistration(hass).async_unregister()
 
 
 def _async_register_services(hass: HomeAssistant) -> None:

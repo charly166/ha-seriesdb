@@ -3,11 +3,11 @@
   "name": "HA SeriesDB",
   "codeowners": ["@charly166"],
   "config_flow": true,
-  "dependencies": ["http"],
+  "dependencies": ["frontend", "http"],
   "documentation": "https://github.com/charly166/ha-seriesdb",
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/charly166/ha-seriesdb/issues",
   "requirements": [],
-  "version": "1.1.11"
+  "version": "1.12.0"
 }

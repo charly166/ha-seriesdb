@@ -2,15 +2,21 @@
 
 Registriert `ha-seriesdb-card.js` als Lovelace-"Modul"-Ressource im
 Storage-Modus - genau so, wie es der manuelle Weg über "Einstellungen ->
-Dashboards -> Ressourcen" auch tut. Das unterscheidet sich bewusst von
-`frontend.add_extra_js_url()`, das für generische, dashboard-unabhängige
-Zusatzskripte gedacht ist und sich in der Praxis als unzuverlässig erwiesen
-hat (siehe README "Technische Hinweise").
+Dashboards -> Ressourcen" auch tut.
 
-Vorgehen angelehnt an die Community-Anleitung
-https://gist.github.com/KipK/3cf706ac89573432803aaa2f5ca40492, die
-ihrerseits von den Integrationen marees_france und Browser Mod inspiriert
-ist.
+Zwei wichtige, live gefundene Details (siehe README "Technische Hinweise"
+für die volle Geschichte):
+
+1. Das Attribut heißt `resource_mode` (nicht `mode`) auf der
+   `LovelaceData`-Datenklasse - siehe
+   homeassistant/components/lovelace/__init__.py im Home-Assistant-Kern.
+2. Die Ressourcen-Collection wird vom Kern nur "lazy" geladen, ausgelöst
+   durch das Frontend (bekannter, zum Zeitpunkt dieses Codes offener
+   Home-Assistant-Bug: https://github.com/home-assistant/core/issues/165767).
+   Statt passiv auf `resources.loaded` zu warten, wird hier deshalb aktiv
+   `await resources.async_load()` aufgerufen, falls noch nicht geladen -
+   das ist ungefährlich (reiner Lesevorgang von der Festplatte) und macht
+   das Warten auf einen verbundenen Browser überflüssig.
 """
 from __future__ import annotations
 
@@ -18,7 +24,6 @@ import logging
 from typing import Any
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.event import async_call_later
 
 from .const import CARD_FILENAME, CARD_VERSION, STATIC_BASE_PATH
 
@@ -37,18 +42,11 @@ class LovelaceResourceRegistration:
         """Registriert (oder aktualisiert) die Ressource, falls möglich."""
         lovelace = self.hass.data.get("lovelace")
         if lovelace is None:
-            _LOGGER.debug(
-                "HA SeriesDB: Lovelace ist noch nicht geladen, versuche es in 5s erneut."
-            )
-            async_call_later(self.hass, 5, lambda _now: self.hass.async_create_task(self.async_register()))
+            _LOGGER.debug("HA SeriesDB: Lovelace ist noch nicht geladen.")
             return
 
-        mode = getattr(lovelace, "mode", None)
-        if mode != "storage":
-            # YAML-Modus: Home Assistant erlaubt Integrationen hier keinen
-            # Schreibzugriff auf die Ressourcenliste. Nutzer müssen die Karte
-            # in diesem Fall manuell in ui-lovelace.yaml eintragen (siehe
-            # README).
+        resource_mode = getattr(lovelace, "resource_mode", None)
+        if resource_mode != "storage":
             _LOGGER.info(
                 "HA SeriesDB: Lovelace läuft im YAML-Modus, die Karten-Ressource "
                 "kann nicht automatisch eingetragen werden. Bitte manuell "
@@ -58,30 +56,34 @@ class LovelaceResourceRegistration:
             )
             return
 
-        await self._async_wait_for_resources(lovelace)
+        resources = lovelace.resources
+        try:
+            if not resources.loaded:
+                # Aktiv laden statt passiv auf das Frontend zu warten (siehe
+                # Modul-Docstring / home-assistant/core#165767). Reiner
+                # Lesevorgang, unbedenklich auch falls bereits geladen.
+                # async_load() setzt .loaded intern selbst auf True.
+                await resources.async_load()
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception(
+                "HA SeriesDB: Konnte Lovelace-Ressourcen nicht laden, "
+                "automatische Registrierung übersprungen."
+            )
+            return
 
-    async def _async_wait_for_resources(self, lovelace: Any) -> None:
-        async def _check_loaded(_now: Any = None) -> None:
-            if lovelace.resources.loaded:
-                await self._async_sync_resource(lovelace)
-            else:
-                async_call_later(self.hass, 5, _check_loaded)
+        await self._async_sync_resource(resources)
 
-        await _check_loaded()
-
-    async def _async_sync_resource(self, lovelace: Any) -> None:
+    async def _async_sync_resource(self, resources: Any) -> None:
         existing = [
             r
-            for r in lovelace.resources.async_items()
+            for r in resources.async_items()
             if r["url"].split("?")[0] == RESOURCE_URL
         ]
         target_url = f"{RESOURCE_URL}?v={CARD_VERSION}"
 
         if not existing:
             _LOGGER.info("HA SeriesDB: Registriere Karte als Lovelace-Ressource.")
-            await lovelace.resources.async_create_item(
-                {"res_type": "module", "url": target_url}
-            )
+            await resources.async_create_item({"res_type": "module", "url": target_url})
             return
 
         resource = existing[0]
@@ -93,15 +95,18 @@ class LovelaceResourceRegistration:
                 "HA SeriesDB: Aktualisiere Karten-Ressource auf Version %s.",
                 CARD_VERSION,
             )
-            await lovelace.resources.async_update_item(
+            await resources.async_update_item(
                 resource["id"], {"res_type": "module", "url": target_url}
             )
 
     async def async_unregister(self) -> None:
         """Entfernt die Ressource wieder (beim vollständigen Entfernen der Integration)."""
         lovelace = self.hass.data.get("lovelace")
-        if lovelace is None or getattr(lovelace, "mode", None) != "storage":
+        if lovelace is None or getattr(lovelace, "resource_mode", None) != "storage":
             return
-        for resource in list(lovelace.resources.async_items()):
+        resources = lovelace.resources
+        if not resources.loaded:
+            return
+        for resource in list(resources.async_items()):
             if resource["url"].split("?")[0] == RESOURCE_URL:
-                await lovelace.resources.async_delete_item(resource["id"])
+                await resources.async_delete_item(resource["id"])

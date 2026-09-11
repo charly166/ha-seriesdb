@@ -108,23 +108,26 @@ requests per 10 seconds), which is more than enough for this integration.
 **Settings → Devices & Services → Add Integration** → search for "HA
 SeriesDB" → enter your API key.
 
-## 3. Register the card as a dashboard resource (one-time, manual)
+## 3. The card registers itself automatically
 
-The card does **not** register itself automatically. This was attempted
-twice and reverted both times – see "Technical Notes" below for why. Register
-it the same way as any other custom card:
+The card registers itself as a Lovelace dashboard resource on setup – the
+same way the manual "Settings → Dashboards → Resources" UI action would, by
+writing into the exact same storage collection. No manual step needed for
+dashboards in the default storage mode. Just restart Home Assistant once
+after installing, then reload your browser.
 
-1. **Settings → Dashboards → three-dot menu (top right) → Resources**
-2. **+ Add Resource**
-3. URL: `/ha_seriesdb/ha-seriesdb-card.js?v=12` (the exact current version
-   number is also logged at startup – **Settings → System → Logs**, search
-   for "HA SeriesDB")
-4. Resource type: **JavaScript Module**
-5. Save, then reload the page once.
-
-**After a future update** of this integration, edit this resource entry and
-bump the `?v=...` number to match – the log message tells you the currently
-expected number.
+**Only if your dashboard uses legacy YAML mode** (not the default) does
+Home Assistant not allow integrations to write to the resource list at all.
+In that case, add this to your `ui-lovelace.yaml` manually:
+```yaml
+resources:
+  - url: /ha_seriesdb/ha-seriesdb-card.js?v=12
+    type: module
+```
+You'll need to bump the `?v=...` number yourself after each future update in
+that case – storage-mode dashboards get this automatically. The exact
+current version number is always in the startup log (**Settings → System →
+Logs**, search for "HA SeriesDB").
 
 ## 4. Add the card to your dashboard
 
@@ -211,29 +214,37 @@ automation:
 - `iot_class: cloud_polling` – the integration actively polls
   themoviedb.org, by default every 12 hours for tracked shows, plus on every
   manual search/add action.
-- **Why the card doesn't self-register (two attempts, both reverted).**
-  Attempt 1 used Home Assistant's `frontend.add_extra_js_url()` helper to
-  load the card automatically into every dashboard. In practice this turned
-  out to race against Home Assistant's own card-creation logic: if the
-  script hadn't finished loading (and defining its custom element) by the
-  time a dashboard tried to instantiate `<ha-seriesdb-card>`, Home Assistant
-  would show a generic "Configuration error" instead of retrying
+- **How automatic card registration works (third attempt, this one
+  stuck).** Attempt 1 used Home Assistant's `frontend.add_extra_js_url()`
+  helper to load the card automatically into every dashboard. In practice
+  this turned out to race against Home Assistant's own card-creation logic:
+  if the script hadn't finished loading (and defining its custom element) by
+  the time a dashboard tried to instantiate `<ha-seriesdb-card>`, Home
+  Assistant would show a generic "Configuration error" instead of retrying
   successfully – with no JavaScript error logged at all, and it behaved
   inconsistently across browsers and cache states. Attempt 2 switched to
   writing directly into the same storage collection Home Assistant's own
-  **Lovelace Resources** UI uses:
-  `hass.data["lovelace"].resources.async_create_item(...)`, waiting for
-  `lovelace.resources.loaded` before writing. This ran into a currently open
-  Home Assistant core bug instead
+  **Lovelace Resources** UI uses
+  (`hass.data["lovelace"].resources.async_create_item(...)`), but passively
+  waited for `lovelace.resources.loaded` to become `true` before writing.
+  That ran into a genuinely open Home Assistant core bug
   (https://github.com/home-assistant/core/issues/165767): the resource
   collection is only loaded lazily, triggered by the *frontend* requesting
-  it – not reliably during integration setup – so `.loaded` may never
-  become `true` without a browser having already opened a dashboard, and in
-  the worst case, writing before it's genuinely loaded can silently wipe
-  out every other dashboard's existing resources. That risk wasn't worth
-  the convenience, so this integration went back to requiring the one-time
-  manual step above – the same step virtually every other custom card
-  (including everything installed via HACS) already requires.
+  it, so `.loaded` may never become `true` without a browser having already
+  opened a dashboard – the registration simply never fired in practice.
+  Attempt 3 (current) fixes this by **actively** calling
+  `resources.async_load()` itself instead of waiting for the frontend to
+  trigger it (a plain, safe read from disk), and also fixes a second,
+  separate bug found along the way: the Lovelace mode is exposed as
+  `lovelace.resource_mode`, not `lovelace.mode` as an earlier draft assumed
+  – accessing the wrong attribute name silently returned `None` via
+  `getattr(..., default=None)` every time, so the check for storage mode
+  always failed without ever raising an error, which is why the previous
+  attempt appeared to do nothing at all. The registration logic itself is
+  covered by a small mocked unit test (not run in CI, but kept alongside
+  `frontend.py` during development) covering: first-time creation, updating
+  an outdated version, skipping when already current, skipping cleanly in
+  YAML mode, and not crashing if Lovelace isn't loaded yet.
 - **Card sizing in "Sections" dashboards.** The card implements
   `getGridOptions()` (default full width, 8 rows, resizable between 6–12
   columns and 4–16 rows) and additionally sets `height: 100%` on its host
@@ -271,6 +282,7 @@ ha-seriesdb/
     ├── config_flow.py        Setup dialog (API key)
     ├── const.py
     ├── coordinator.py        Periodic episode refresh
+    ├── frontend.py            Automatic Lovelace resource registration
     ├── manifest.json
     ├── sensor.py              One sensor entity per tracked show
     ├── services.yaml

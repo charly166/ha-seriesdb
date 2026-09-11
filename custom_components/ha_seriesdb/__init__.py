@@ -37,6 +37,7 @@ from .const import (
     STATIC_BASE_PATH,
 )
 from .coordinator import TMDBCoordinator
+from .frontend import LovelaceResourceRegistration
 from .store import TMDBStore
 from .websocket_api import async_register_commands
 
@@ -76,6 +77,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         async_register_commands(hass)
         await _async_register_static_files(hass)
         _async_register_services(hass)
+        # Erst NACH dem Setup versuchen (Lovelace ist zu diesem Zeitpunkt in
+        # aller Regel bereits verfügbar, egal ob beim initialen Einrichten
+        # über die UI oder bei einem Neustart mit bestehendem Config Entry).
+        # Fehler hier dürfen das Setup der Integration selbst nicht zum
+        # Scheitern bringen - deshalb bewusst nicht awaited/blockierend und
+        # mit eigenem Try/Except innerhalb von LovelaceResourceRegistration.
+        hass.async_create_task(LovelaceResourceRegistration(hass).async_register())
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
@@ -88,42 +96,22 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Wird aufgerufen, wenn die Integration vollständig entfernt wird (nicht
+    bei einem einfachen Neuladen). Entfernt in diesem Fall auch die
+    Lovelace-Ressource wieder, damit nichts verwaist zurückbleibt."""
+    if not hass.data.get(DOMAIN):
+        await LovelaceResourceRegistration(hass).async_unregister()
+
+
 async def _async_register_static_files(hass: HomeAssistant) -> None:
-    """Stellt den www/-Ordner (Karte, Icon, TMDB-Logo) statisch bereit.
-
-    WICHTIG: Die Karte registriert sich bewusst NICHT automatisch als
-    Lovelace-Ressource. Zwei Ansätze wurden ausprobiert und beide verworfen:
-
-    1. `frontend.add_extra_js_url()` - für globale Zusatzskripte gedacht,
-       nicht für Lovelace-Karten. Lief in der Praxis der eigenen
-       Kartenerstellung von Home Assistant den Rang ab (Skript teils noch
-       nicht fertig geladen, wenn ein Dashboard die Karte erzeugen wollte ->
-       "Konfigurationsfehler", ohne jede Fehlermeldung im Log).
-    2. Direktes Schreiben in `hass.data["lovelace"].resources` (derselbe Weg,
-       den die manuelle "Ressourcen"-UI nutzt) - dabei aber auf einen
-       offenen, zum Zeitpunkt dieses Schreibens noch ungelösten
-       Home-Assistant-Kernfehler gestoßen: Die Ressourcenliste wird "lazy"
-       erst geladen, ausgelöst durch das Frontend - nicht zuverlässig beim
-       Start der Integration. Schreibt man vorher, kann das im schlimmsten
-       Fall sogar alle bestehenden Ressourcen anderer Karten überschreiben
-       (siehe https://github.com/home-assistant/core/issues/165767). Das
-       Risiko war es nicht wert.
-
-    Der zuverlässige Weg bleibt deshalb die einmalige, manuelle
-    Registrierung über Einstellungen -> Dashboards -> Ressourcen (siehe
-    README) - genau wie bei praktisch jeder anderen Custom Card auch.
-    """
+    """Stellt den www/-Ordner (Karte, Icon, TMDB-Logo) statisch bereit."""
     from homeassistant.components.http import StaticPathConfig
 
     await hass.http.async_register_static_paths(
         [StaticPathConfig(STATIC_BASE_PATH, str(WWW_DIR), cache_headers=True)]
     )
-    _LOGGER.info(
-        "HA SeriesDB: Bitte folgende URL einmalig manuell unter "
-        "Einstellungen -> Dashboards -> Ressourcen als 'JavaScript-Modul' "
-        "hinzufügen: %s",
-        CARD_URL_PATH,
-    )
+    _LOGGER.debug("HA SeriesDB: Karte wird ausgeliefert unter %s", CARD_URL_PATH)
 
 
 def _async_register_services(hass: HomeAssistant) -> None:

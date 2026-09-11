@@ -18,6 +18,10 @@ Eine Home-Assistant-Integration inkl. eigener Lovelace-Karte (GUI), mit der du
 TV-Serien über die **kostenlose themoviedb.org (TMDB) API** suchen, zu einer
 Watchlist hinzufügen und einzelne Episoden als "gesehen" abhaken kannst.
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="HA-SeriesDB-Karte mit Watchlist, Poster-Ansicht und Sehfortschritt" width="420">
+</p>
+
 ## Funktionsumfang
 
 - Serien über themoviedb.org suchen und zur Watchlist hinzufügen

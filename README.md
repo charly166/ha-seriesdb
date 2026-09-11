@@ -18,6 +18,10 @@ A Home Assistant custom integration with its own Lovelace card (GUI) for
 tracking TV shows: search for a series via the free **themoviedb.org (TMDB)
 API**, add it to your watchlist, and check off episodes as you watch them.
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="HA SeriesDB card showing the watchlist with poster grid and watch progress" width="420">
+</p>
+
 ## Features
 
 - Search themoviedb.org and add shows to your watchlist

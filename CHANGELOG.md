@@ -14,7 +14,7 @@ Initial public release.
 - Local icon under Devices & Services (Home Assistant 2026.3+)
 - TMDB attribution notice built into the card
 
-## 1.1.0 (unreleased)
+## 2.0.0
 
 - Card now registers itself automatically as a Lovelace dashboard resource,
   writing into the same storage collection the manual "Resources" UI uses.
@@ -32,6 +32,8 @@ Initial public release.
 - Added a minimal `getConfigElement()` / card editor, which is required for
   Home Assistant's card edit dialog to show its "Layout" size tab at all
   (without it, the dialog falls back to a bare YAML view with no tabs).
+- Added HACS support (`hacs.json`, validation workflow, English README).
+- Added a screenshot of the card to the README.
 - manifest.json: fixed translation strings (no raw URLs, per hassfest),
   fixed missing "http" dependency, added "frontend" dependency.
 - GitHub Actions workflow bumped to actions/checkout@v6.

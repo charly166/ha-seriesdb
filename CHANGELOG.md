@@ -14,6 +14,14 @@ Initial public release.
 - Local icon under Devices & Services (Home Assistant 2026.3+)
 - TMDB attribution notice built into the card
 
+## 2.0.1
+
+- CI: aligned `.github/workflows/validate.yml` with the official HACS
+  Action template (https://www.hacs.xyz/docs/publish/action/) — added
+  `permissions: {}`, removed the unnecessary checkout step before
+  `hacs/action`, switched to a daily schedule, and run on all branches.
+  No functional changes to the integration or card.
+
 ## 2.0.0
 
 - Card now registers itself automatically as a Lovelace dashboard resource,

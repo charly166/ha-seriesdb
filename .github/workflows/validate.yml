@@ -2,18 +2,21 @@ name: Validate
 
 on:
   push:
-    branches: [main]
   pull_request:
   schedule:
-    - cron: "0 0 * * 0"
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
-  hacs:
+  validate-hacs:
     name: HACS validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      # Kein expliziter checkout-Schritt hier: hacs/action holt sich das
+      # Repository selbst (laut offizieller Doku
+      # https://www.hacs.xyz/docs/publish/action/ nicht nötig).
       - name: HACS validation
         uses: hacs/action@main
         with:

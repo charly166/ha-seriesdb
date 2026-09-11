@@ -16,13 +16,15 @@ Initial public release.
 
 ## 1.1.0 (unreleased)
 
-- Card now registers itself automatically as a Lovelace dashboard resource
-  via the same storage mechanism the manual "Resources" UI uses, instead of
-  requiring a one-time manual step. Falls back to manual registration only
-  for dashboards still in legacy YAML mode.
+- Attempted automatic Lovelace resource registration (both via
+  `add_extra_js_url()` and directly via the resource storage collection);
+  reverted both times after hitting a race condition and a currently open
+  Home Assistant core bug (home-assistant/core#165767) respectively. The
+  card continues to require the one-time manual "Resources" registration
+  step, same as before.
 - Card now properly fills the assigned grid cell height in "Sections"
   dashboards (getGridOptions() + height: 100% flex layout), matching
   standard behavior of other Home Assistant cards.
-- manifest.json: added "frontend" dependency, fixed translation strings
-  (no raw URLs, per hassfest), fixed missing "http" dependency.
+- manifest.json: fixed translation strings (no raw URLs, per hassfest),
+  fixed missing "http" dependency.
 - GitHub Actions workflow bumped to actions/checkout@v6.

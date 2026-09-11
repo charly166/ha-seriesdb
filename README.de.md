@@ -117,29 +117,24 @@ problemlos.
 **Einstellungen → Geräte & Dienste → Integration hinzufügen** → nach
 "HA SeriesDB" suchen → den API-Key eingeben.
 
-## 4. Die Karte registriert sich automatisch
+## 4. Karte als Ressource registrieren (einmaliger, manueller Schritt)
 
-Die Karte registriert sich jetzt beim Start automatisch als Lovelace-
-Dashboard-Ressource (genau so, wie es die manuelle Aktion unter
-„Einstellungen → Dashboards → Ressourcen" auch tun würde) – für die
-allermeisten Installationen ist kein manueller Schritt mehr nötig. Nach der
-Installation einfach einmal Home Assistant neu starten und danach den
-Browser neu laden.
+Die Karte bindet sich **nicht automatisch** ein. Das wurde zweimal
+versucht und beide Male wieder zurückgenommen – siehe „Technische Hinweise"
+unten für die Details. Stattdessen wie bei jeder anderen Custom Card üblich:
 
-**Nur falls dein Dashboard noch im alten YAML-Modus läuft** (nicht der
-Standard), erlaubt Home Assistant Integrationen grundsätzlich keinen
-automatischen Schreibzugriff auf die Ressourcenliste. In dem Fall in der
-`ui-lovelace.yaml` manuell ergänzen:
-```yaml
-resources:
-  - url: /ha_seriesdb/ha-seriesdb-card.js?v=12
-    type: module
-```
-Die exakte, aktuelle Versionsnummer steht auch im Home-Assistant-Log
-(**Einstellungen → System → Protokolle**, Suche nach „HA SeriesDB"). Im
-YAML-Modus musst du diese Nummer nach jedem Update selbst erhöhen
-(Storage-Modus-Dashboards übernehmen das automatisch, da die Integration
-bei jedem Neustart erkennt, wenn sich die Version geändert hat).
+- **Einstellungen → Dashboards → oben rechts drei Punkte → Ressourcen**
+- **+ Ressource hinzufügen**
+- URL: `/ha_seriesdb/ha-seriesdb-card.js?v=12` (die exakte, aktuelle
+  Versionsnummer steht auch im Home-Assistant-Log unter „HA SeriesDB:
+  Bitte folgende URL..." – **Einstellungen → System → Protokolle**)
+- Ressourcentyp: **JavaScript-Modul**
+- Speichern, danach die Seite einmal neu laden.
+
+**Bei einem künftigen Update dieser Integration** muss diese URL manuell
+auf die neue Versionsnummer angepasst werden (Ressourcen-Eintrag
+bearbeiten, `?v=...` erhöhen) – das Log verrät dir jeweils die aktuell
+erwartete Nummer.
 
 ## 5. Karte zum Dashboard hinzufügen
 
@@ -253,38 +248,31 @@ automation:
   enthalten und erfordert keine weitere Konfiguration. Nutzt du eine ältere
   HA-Version als 2026.3, wird stattdessen ein generisches Platzhalter-Icon
   angezeigt.
-- **Wie die automatische Kartenregistrierung tatsächlich funktioniert.**
-  Frühere Versionen nutzten Home Assistants Hilfsfunktion
+- **Warum sich die Karte nicht selbst registriert (zwei Versuche, beide
+  zurückgenommen).** Versuch 1 nutzte Home Assistants Hilfsfunktion
   `frontend.add_extra_js_url()`, um die Karte automatisch in jedes Dashboard
   einzubinden. In der Praxis lief das der eigenen Kartenerstellung von Home
   Assistant den Rang ab: War das Skript zu dem Zeitpunkt, an dem ein
   Dashboard `<ha-seriesdb-card>` erzeugen wollte, noch nicht fertig geladen
   (und hatte sein Custom Element noch nicht registriert), zeigte Home
-  Assistant einen generischen "Konfigurationsfehler" an, statt es zuverlässig
-  erneut zu versuchen – dabei wurde nicht einmal eine JavaScript-Fehlermeldung
-  protokolliert, was die Fehlersuche besonders erschwerte, und das Verhalten
-  war zwischen Browsern und Cache-Zuständen inkonsistent. Der Fix war der
-  Wechsel zu genau dem Mechanismus, den Home Assistants eigene
-  **Lovelace-Ressourcenverwaltung** (Einstellungen → Dashboards →
-  Ressourcen) selbst intern nutzt:
-  `hass.data["lovelace"].resources.async_create_item(...)`. Da das exakt
-  dieselbe Storage-Collection ist, in die auch die manuelle UI-Aktion
-  schreibt, ist das sauber in Lovelaces eigenen Ressourcen-Lade- und
-  Kartenerstellungs-Lebenszyklus eingebunden und läuft nicht mehr gegen ihn.
-  Die Registrierung passiert in einem eigenen `async_setup()`-Hook (nicht
-  `async_setup_entry()`), läuft also einmal pro Home-Assistant-Start,
-  unabhängig von Config Entries, und wartet dabei auf das
-  `EVENT_HOMEASSISTANT_STARTED`-Ereignis sowie auf
-  `lovelace.resources.loaded`, da die Ressourcenverwaltung vorher noch nicht
-  verfügbar ist. Bei jedem Neustart wird zudem die registrierte Version mit
-  dem aktuellen `CARD_VERSION` verglichen und bei Abweichung automatisch
-  aktualisiert – kein manuelles Cache-Busting mehr nötig. Das Vorgehen ist
-  an einen Community-Guide angelehnt
-  (https://gist.github.com/KipK/3cf706ac89573432803aaa2f5ca40492), der
-  seinerseits von den Integrationen `marees_france` und `Browser Mod`
-  inspiriert ist. Ein manueller Schritt bleibt nur für Dashboards im alten
-  YAML-Modus nötig, da Home Assistant Integrationen dort grundsätzlich
-  keinen Schreibzugriff auf die Ressourcenliste erlaubt.
+  Assistant einen generischen "Konfigurationsfehler" an, statt es
+  zuverlässig erneut zu versuchen – dabei wurde nicht einmal eine
+  JavaScript-Fehlermeldung protokolliert, und das Verhalten war zwischen
+  Browsern und Cache-Zuständen inkonsistent. Versuch 2 schrieb stattdessen
+  direkt in dieselbe Storage-Collection, die auch Home Assistants eigene
+  **Lovelace-Ressourcenverwaltung** nutzt:
+  `hass.data["lovelace"].resources.async_create_item(...)`, mit Wartelogik
+  auf `lovelace.resources.loaded`. Dabei stieß dieses Projekt auf einen zum
+  Zeitpunkt des Schreibens offenen Home-Assistant-Kernfehler
+  (https://github.com/home-assistant/core/issues/165767): Die
+  Ressourcenliste wird nur "lazy" geladen, ausgelöst durch das *Frontend* –
+  nicht zuverlässig während des Integrations-Setups. `.loaded` kann daher
+  dauerhaft `false` bleiben, wenn noch niemand ein Dashboard geöffnet hat,
+  und im schlimmsten Fall kann ein zu früher Schreibzugriff sogar die
+  Ressourcen aller anderen Dashboards überschreiben. Dieses Risiko war den
+  Komfortgewinn nicht wert – deshalb wieder zurück zum oben beschriebenen
+  einmaligen, manuellen Schritt, den praktisch jede andere Custom Card
+  (auch alle über HACS installierten) ebenfalls verlangt.
 - **Kartengröße in "Sections"-Dashboards.** Die Karte implementiert
   `getGridOptions()` (Standard: volle Breite, 8 Zeilen, einstellbar
   zwischen 6–12 Spalten und 4–16 Zeilen) und setzt zusätzlich durchgehend
@@ -324,7 +312,6 @@ ha-seriesdb/
     ├── config_flow.py        Einrichtungsdialog (API-Key)
     ├── const.py
     ├── coordinator.py        Periodisches Nachladen neuer Episoden
-    ├── frontend.py            Automatische Lovelace-Ressourcen-Registrierung
     ├── manifest.json
     ├── sensor.py              Eine Sensor-Entität pro verfolgter Serie
     ├── services.yaml

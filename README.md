@@ -121,7 +121,7 @@ Home Assistant not allow integrations to write to the resource list at all.
 In that case, add this to your `ui-lovelace.yaml` manually:
 ```yaml
 resources:
-  - url: /ha_seriesdb/ha-seriesdb-card.js?v=12
+  - url: /ha_seriesdb/ha-seriesdb-card.js?v=13
     type: module
 ```
 You'll need to bump the `?v=...` number yourself after each future update in
@@ -257,6 +257,15 @@ automation:
   CSS spec, so the card falls back to a content-based height capped at a
   sensible maximum to avoid layout jumps between tabs with very different
   amounts of content.
+- **Why the "Layout" size tab needs a (trivial) config editor.** Home
+  Assistant's card edit dialog only shows its modern tabbed shell
+  (Configuration / Visibility / Layout) for cards that implement
+  `getConfigElement()`. Without it, Home Assistant falls back to a bare
+  YAML-only dialog with no tabs at all – which also hides the "Layout" size
+  tab, even though `getGridOptions()` above works independently of it. Since
+  this card has no configurable options, `getConfigElement()` just returns a
+  minimal custom element (`ha-seriesdb-card-editor`) that renders a short
+  explanatory sentence and otherwise does nothing.
 - Own icon in "Devices & Services": since Home Assistant 2026.3, custom
   integrations can ship their own icon locally (`brand/` folder with
   `icon.png`, `icon@2x.png`, `logo.png`, `logo@2x.png`) – no pull request to

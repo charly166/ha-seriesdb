@@ -474,6 +474,18 @@ class HaSeriesDbCard extends HTMLElement {
     return {};
   }
 
+  static getConfigElement() {
+    // Diese Karte hat keine Konfigurationsoptionen, deshalb reicht ein
+    // leerer/minimaler Editor. Entscheidend ist aber, DASS überhaupt einer
+    // vorhanden ist: Ohne getConfigElement() zeigt Home Assistant im
+    // Karten-Editor-Dialog gar keine Tab-Leiste an (weder "Sichtbarkeit"
+    // noch "Layout"), sondern nur eine reine YAML-Ansicht mit dem Hinweis
+    // "Visueller Editor wird nicht unterstützt" - der Layout-Tab mit den
+    // Größen-Schiebereglern (getGridOptions() oben) wird davon mit
+    // ausgeblendet, obwohl er technisch unabhängig davon implementiert ist.
+    return document.createElement("ha-seriesdb-card-editor");
+  }
+
   async _callWS(payload) {
     return this._hass.callWS({ type: `${DOMAIN}/${payload.cmd}`, ...payload.args });
   }
@@ -1160,6 +1172,41 @@ class HaSeriesDbCard extends HTMLElement {
     if (className) e.className = className;
     return e;
   }
+}
+
+// Minimaler Konfigurations-Editor: Diese Karte hat keine einstellbaren
+// Optionen (nur `type: custom:ha-seriesdb-card`), daher genügt ein kurzer
+// Hinweistext. Wichtig ist vor allem, DASS die Klasse existiert - siehe
+// Kommentar bei getConfigElement() oben.
+class HaSeriesDbCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = config || {};
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+  }
+
+  _render() {
+    if (this.shadowRoot) return;
+    const root = this.attachShadow({ mode: "open" });
+    root.innerHTML = `
+      <style>
+        p {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+          font-size: 14px;
+          color: var(--secondary-text-color, #6b7280);
+          padding: 16px 4px;
+          margin: 0;
+        }
+      </style>
+      <p>Diese Karte hat keine Konfigurationsoptionen. Breite und Höhe lassen sich über den Reiter „Layout" einstellen.</p>
+    `;
+  }
+}
+if (!customElements.get("ha-seriesdb-card-editor")) {
+  customElements.define("ha-seriesdb-card-editor", HaSeriesDbCardEditor);
 }
 
 // Absicherung: Falls das Skript aus irgendeinem Grund mehrfach im selben

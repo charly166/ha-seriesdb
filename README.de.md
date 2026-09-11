@@ -132,7 +132,7 @@ Schreibzugriff auf die Ressourcenliste. In dem Fall in der
 `ui-lovelace.yaml` manuell ergänzen:
 ```yaml
 resources:
-  - url: /ha_seriesdb/ha-seriesdb-card.js?v=12
+  - url: /ha_seriesdb/ha-seriesdb-card.js?v=13
     type: module
 ```
 In dem Fall musst du diese Nummer nach jedem künftigen Update selbst
@@ -295,6 +295,16 @@ automation:
   CSS-Spezifikation automatisch zu `auto`, die Karte fällt dann auf eine
   inhaltsbasierte, bei einem sinnvollen Maximum gedeckelte Höhe zurück, um
   Sprünge zwischen unterschiedlich vollen Tabs zu vermeiden.
+- **Warum der Layout-Größen-Tab einen (trivialen) Konfigurations-Editor
+  braucht.** Der Karten-Bearbeiten-Dialog von Home Assistant zeigt seine
+  moderne Tab-Leiste (Konfiguration / Sichtbarkeit / Layout) nur für Karten,
+  die `getConfigElement()` implementieren. Ohne das fällt Home Assistant auf
+  einen reinen YAML-Dialog ganz ohne Tabs zurück – wodurch auch der
+  Layout-Größen-Tab verschwindet, obwohl `getGridOptions()` oben davon
+  technisch unabhängig funktioniert. Da diese Karte keine einstellbaren
+  Optionen hat, liefert `getConfigElement()` einfach ein minimales
+  Custom-Element (`ha-seriesdb-card-editor`) zurück, das nur einen kurzen
+  Hinweistext anzeigt und sonst nichts tut.
 - Getestet wurde die Code-Struktur gegen die öffentliche TMDB-API-Dokumentation
   (https://developer.themoviedb.org/reference/intro/getting-started). Da in
   dieser Umgebung kein Zugriff auf eine laufende Home-Assistant-Instanz oder

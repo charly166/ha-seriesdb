@@ -29,6 +29,9 @@ Initial public release.
 - Card now properly fills the assigned grid cell height in "Sections"
   dashboards (getGridOptions() + height: 100% flex layout), matching
   standard behavior of other Home Assistant cards.
+- Added a minimal `getConfigElement()` / card editor, which is required for
+  Home Assistant's card edit dialog to show its "Layout" size tab at all
+  (without it, the dialog falls back to a bare YAML view with no tabs).
 - manifest.json: fixed translation strings (no raw URLs, per hassfest),
   fixed missing "http" dependency, added "frontend" dependency.
 - GitHub Actions workflow bumped to actions/checkout@v6.

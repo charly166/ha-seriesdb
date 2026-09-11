@@ -125,7 +125,7 @@ Home Assistant not allow integrations to write to the resource list at all.
 In that case, add this to your `ui-lovelace.yaml` manually:
 ```yaml
 resources:
-  - url: /ha_seriesdb/ha-seriesdb-card.js?v=13
+  - url: /ha_seriesdb/ha-seriesdb-card.js?v=14
     type: module
 ```
 You'll need to bump the `?v=...` number yourself after each future update in

@@ -136,7 +136,7 @@ Schreibzugriff auf die Ressourcenliste. In dem Fall in der
 `ui-lovelace.yaml` manuell ergänzen:
 ```yaml
 resources:
-  - url: /ha_seriesdb/ha-seriesdb-card.js?v=13
+  - url: /ha_seriesdb/ha-seriesdb-card.js?v=14
     type: module
 ```
 In dem Fall musst du diese Nummer nach jedem künftigen Update selbst

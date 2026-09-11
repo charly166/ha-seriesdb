@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.2
+
+- Fixed: checking off an episode further down in a long episode list jumped
+  the whole card back to the top. The card fully rebuilds its episode list
+  on every re-render, which reset the scroll position of the list to 0 each
+  time. The scroll position is now preserved across re-renders.
+- Checking an episode now also auto-collapses earlier seasons that just
+  became fully watched as a result (matching the existing behavior when
+  first opening a show), while explicitly scrolling to keep the
+  just-checked episode in view instead of jumping away.
+
 ## 1.0.0
 
 Initial public release.

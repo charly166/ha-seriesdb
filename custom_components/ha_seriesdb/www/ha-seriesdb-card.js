@@ -429,6 +429,7 @@ class HaSeriesDbCard extends HTMLElement {
     this._selectedSeriesId = null;
     this._detail = null;
     this._collapsedSeasons = new Set();
+    this._scrollToEpisodeId = null;
     this._error = null;
     this._successMessage = null;
     this._successTimeout = null;
@@ -618,6 +619,19 @@ class HaSeriesDbCard extends HTMLElement {
     };
     const changed = this._detail.episodes.filter((e) => isUpTo(e) && !e.watched);
     changed.forEach((e) => (e.watched = true)); // optimistisch
+
+    // Vorherige Staffeln, die dadurch jetzt komplett gesehen sind, automatisch
+    // einklappen (wie beim erstmaligen Öffnen der Serie) - die aktuelle
+    // Staffel bleibt bewusst offen, damit die gerade angehakte Folge sichtbar
+    // bleibt.
+    for (const [seasonNumber, episodes] of this._groupBySeason(this._detail.episodes)) {
+      if (seasonNumber >= targetKey[0]) continue;
+      if (episodes.length > 0 && episodes.every((e) => e.watched)) {
+        this._collapsedSeasons.add(seasonNumber);
+      }
+    }
+    this._scrollToEpisodeId = episodeId;
+
     this._render();
     try {
       await this._hass.callWS({
@@ -716,6 +730,13 @@ class HaSeriesDbCard extends HTMLElement {
       };
     }
 
+    // Scroll-Position der Episodenliste merken: .body wird unten komplett
+    // neu aufgebaut (siehe Kommentar dort), ein frisches Element startet
+    // sonst immer bei scrollTop 0 - das ließ z.B. das Abhaken einer Folge
+    // weit unten in einer langen Liste ganz nach oben springen.
+    const oldBody = root.querySelector(".body");
+    const savedScrollTop = oldBody ? oldBody.scrollTop : 0;
+
     // Den neuen Kartenzustand komplett losgelöst vom Dokument aufbauen (kein
     // einziges Element hängt währenddessen im Shadow-DOM). Das verhindert,
     // dass Browser-Erweiterungen mit eigenem MutationObserver (z.B. manche
@@ -763,6 +784,21 @@ class HaSeriesDbCard extends HTMLElement {
       oldCard.replaceWith(card);
     } else {
       root.appendChild(card);
+    }
+
+    // Gemerkte Scroll-Position wiederherstellen (siehe oben) - erst jetzt
+    // möglich, da scrollTop bei einem noch nicht eingehängten Element immer
+    // 0 bleibt.
+    body.scrollTop = savedScrollTop;
+
+    // Nach "Folge und alle vorherigen als gesehen markieren" ggf. explizit
+    // zur angehakten Folge scrollen: dadurch eingeklappte, jetzt komplett
+    // gesehene Staffeln oberhalb verschieben den Inhalt, die reine
+    // Scroll-Position von oben würde also an der falschen Stelle landen.
+    if (this._scrollToEpisodeId != null) {
+      const targetRow = body.querySelector(`[data-episode-id="${this._scrollToEpisodeId}"]`);
+      if (targetRow) targetRow.scrollIntoView({ block: "nearest" });
+      this._scrollToEpisodeId = null;
     }
 
     if (focusInfo) {
@@ -1089,6 +1125,7 @@ class HaSeriesDbCard extends HTMLElement {
       if (!collapsed) {
         for (const ep of episodes.sort((a, b) => a.episode_number - b.episode_number)) {
           const row = this._el("div", "episode-row");
+          row.dataset.episodeId = String(ep.episode_id);
           const cb = document.createElement("input");
           cb.type = "checkbox";
           cb.checked = !!ep.watched;

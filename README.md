@@ -17,6 +17,12 @@
 A Home Assistant custom integration with its own Lovelace card (GUI) for
 tracking TV shows: search for a series via the free **themoviedb.org (TMDB)
 API**, add it to your watchlist, and check off episodes as you watch them.
+For every show on your watchlist, the card shows which streaming service
+currently offers it (subscription, rent, buy, or free with ads), based on
+TMDB's JustWatch-sourced watch-provider data.
+
+This is a sibling project to [HA MoviesDB](https://github.com/charly166/ha-moviesdb),
+built on the same architecture, but for movies instead of TV shows.
 
 <p align="center">
   <img src="docs/screenshot.png" alt="HA SeriesDB card showing the watchlist with poster grid and watch progress" width="420">
@@ -33,19 +39,27 @@ API**, add it to your watchlist, and check off episodes as you watch them.
   seasons collapse automatically when you open a show.
 - **Archive**: move a show to a separate "Archive" tab once you're done with
   it (e.g. fully watched and the show has ended)
+- **Where to watch**: shows which streaming providers currently offer the
+  show (subscription/flatrate, rent, buy, free with ads), grouped by type,
+  with your own configured providers highlighted
+- **Configurable region and own streaming providers**: choose your country
+  (streaming availability is region-specific) and the services you actually
+  subscribe to under Settings → Devices & Services → HA SeriesDB → Configure
 - Card width **and height** are resizable by dragging in modern "Sections"
   dashboards, filling exactly the assigned grid cell
 - Own icon/logo under Settings → Devices & Services (Home Assistant 2026.3+)
-- A sensor entity per tracked show (watch progress, next unwatched episode)
-  for use in automations
+- A sensor entity per tracked show (watch progress, next unwatched episode,
+  and `available_on` list of your own providers currently streaming it) for
+  use in automations, e.g. "notify me when a show becomes available on
+  Netflix"
 - Services for automations: `add_series`, `remove_series`,
   `mark_episode_watched`, `mark_episode_unwatched`, `mark_watched_up_to`,
-  `mark_season_watched`, `set_archived`, `refresh`
+  `mark_season_watched`, `set_archived`, `refresh`, `refresh_watch_providers`
 - All data (watchlist, watched status, archive) is stored locally in Home
   Assistant (`.storage/ha_seriesdb_data`) – no cloud account needed beyond
   the free TMDB API key
 
-## Legal: TMDB Attribution & License
+## Legal: TMDB & JustWatch Attribution, License
 
 This integration uses the free TMDB API. Its terms of use require a visible
 attribution notice with logo. The card already displays the required text
@@ -65,6 +79,14 @@ of it:
    ```
 3. Done – until that file exists, the card simply hides the logo
    placeholder and keeps showing the required text.
+
+Watch-provider (streaming availability) data is sourced from **JustWatch**
+and delivered through TMDB's `/watch/providers` API, which has its own,
+separate attribution requirement (a visible link back to TMDB/JustWatch,
+already included in the show detail view's "Where to watch" section). This
+is not legal advice – please double-check the current wording at
+https://developer.themoviedb.org/docs/watch-providers-attribution-requirement
+and https://www.themoviedb.org/api-terms-of-use yourself before publishing.
 
 The code itself is licensed under the [MIT License](LICENSE) and may be
 freely redistributed, modified, and published. The "HA SeriesDB" logo shown
@@ -112,7 +134,23 @@ requests per 10 seconds), which is more than enough for this integration.
 **Settings → Devices & Services → Add Integration** → search for "HA
 SeriesDB" → enter your API key.
 
-## 3. The card registers itself automatically
+## 3. Configure your region and streaming providers
+
+**Settings → Devices & Services → HA SeriesDB → Configure** lets you choose:
+
+- **Region**: the country used for streaming-availability lookups (defaults
+  to Germany). Streaming catalogs differ by country, so pick the region you
+  actually watch from.
+- **My streaming providers**: which services you're actually subscribed to
+  (Netflix, Disney+, Prime Video, ...), picked from TMDB's live, up-to-date
+  provider list for your chosen region. These are highlighted in the show
+  detail view and drive the `available_on` sensor attribute.
+
+Changing the region takes full effect the next time you reopen this dialog
+(the provider list shown while you're still on the form reflects the region
+that was active when you opened it).
+
+## 4. The card registers itself automatically
 
 The card registers itself as a Lovelace dashboard resource on setup – the
 same way the manual "Settings → Dashboards → Resources" UI action would, by
@@ -125,7 +163,7 @@ Home Assistant not allow integrations to write to the resource list at all.
 In that case, add this to your `ui-lovelace.yaml` manually:
 ```yaml
 resources:
-  - url: /ha_seriesdb/ha-seriesdb-card.js?v=14
+  - url: /ha_seriesdb/ha-seriesdb-card.js?v=15
     type: module
 ```
 You'll need to bump the `?v=...` number yourself after each future update in
@@ -133,7 +171,7 @@ that case – storage-mode dashboards get this automatically. The exact
 current version number is always in the startup log (**Settings → System →
 Logs**, search for "HA SeriesDB").
 
-## 4. Add the card to your dashboard
+## 5. Add the card to your dashboard
 
 1. Edit dashboard → **Add Card** → scroll to the bottom → **Manual**
 2. Paste:
@@ -158,7 +196,7 @@ small value may still be saved there, overriding the card's new default.
 Either remove and re-add the card, or edit the card as YAML in the dashboard
 editor and delete the `grid_options:` line (or set `columns: 12`).
 
-## 5. Usage
+## 6. Usage
 
 - **Add a show**: "Add Show" tab → type a title (search starts automatically
   from 2 characters) → click "Add" on the desired result. A brief
@@ -171,6 +209,9 @@ editor and delete the `grid_options:` line (or set `columns: 12`).
   "Reset all" toggle a whole season at once and collapse/expand it
   accordingly. There's a "Back to overview" link both above and below the
   episode list.
+- **Where to watch**: the detail view shows which streaming providers
+  currently offer the show, grouped by subscription/rent/buy/free, with your
+  own configured providers highlighted.
 - **Archive a show**: in the detail view, click "Archive" – the show moves
   to the "Archive" tab. If a show is fully watched and its TMDB status is
   "Ended" or "Canceled", the detail view shows a hint suggesting this. "Move
@@ -197,6 +238,24 @@ automation:
             {{ trigger.to_state.attributes.next_unwatched_episode }}
 ```
 
+```yaml
+automation:
+  - alias: "Show now streaming"
+    trigger:
+      - platform: state
+        entity_id: sensor.game_of_thrones # entity_id depends on the show
+        attribute: available_on
+    condition:
+      - condition: template
+        value_template: "{{ trigger.to_state.attributes.available_on | length > 0 }}"
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          message: >
+            {{ trigger.to_state.name }} is now available on
+            {{ trigger.to_state.attributes.available_on | join(', ') }}.
+```
+
 ## Technical Notes
 
 - Pure Python standard library + `aiohttp` (already bundled with Home
@@ -218,6 +277,10 @@ automation:
 - `iot_class: cloud_polling` – the integration actively polls
   themoviedb.org, by default every 12 hours for tracked shows, plus on every
   manual search/add action.
+- Streaming availability is refreshed on the same 12-hour cycle as episodes,
+  but only for non-archived shows (archived shows are considered "done" and
+  no longer refreshed), and can also be refreshed on demand when opening a
+  show's detail view.
 - **How automatic card registration works (third attempt, this one
   stuck).** Attempt 1 used Home Assistant's `frontend.add_extra_js_url()`
   helper to load the card automatically into every dashboard. In practice
@@ -292,9 +355,9 @@ ha-seriesdb/
     ├── brand/                 Local icons for "Devices & Services" (HA 2026.3+)
     │   ├── icon.png / icon@2x.png
     │   └── logo.png / logo@2x.png
-    ├── config_flow.py        Setup dialog (API key)
+    ├── config_flow.py        Setup dialog (API key) + options flow (region/providers)
     ├── const.py
-    ├── coordinator.py        Periodic episode refresh
+    ├── coordinator.py        Periodic episode + watch-provider refresh
     ├── frontend.py            Automatic Lovelace resource registration
     ├── manifest.json
     ├── sensor.py              One sensor entity per tracked show
@@ -310,8 +373,9 @@ ha-seriesdb/
 
 ## Minimum Requirements
 
-- Home Assistant **2024.5.0** or newer (older versions work too, just
-  without the resizable card width and the local "Devices & Services" icon)
+- Home Assistant **2024.12.0** or newer (the region/streaming-provider
+  options flow relies on the `config_entry` property that Home Assistant
+  config flows provide automatically since this version)
 
 ## License
 

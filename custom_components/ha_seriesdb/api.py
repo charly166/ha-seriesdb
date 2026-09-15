@@ -14,11 +14,24 @@ from typing import Any
 import async_timeout
 from aiohttp import ClientSession, ContentTypeError
 
-from .const import TMDB_BASE_URL, TMDB_IMAGE_BASE, TMDB_LANGUAGE, TMDB_POSTER_SIZE, TMDB_STILL_SIZE
+from .const import (
+    FALLBACK_REGIONS,
+    TMDB_BASE_URL,
+    TMDB_IMAGE_BASE,
+    TMDB_LANGUAGE,
+    TMDB_POSTER_SIZE,
+    TMDB_PROVIDER_LOGO_SIZE,
+    TMDB_STILL_SIZE,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT = 20
+
+# Kategorien, in die TMDB (über JustWatch) Streaming-Angebote einsortiert:
+# flatrate = Abo, rent/buy = Leihen/Kaufen, ads = kostenlos mit Werbung,
+# free = vollständig kostenlos.
+PROVIDER_CATEGORIES = ("flatrate", "rent", "buy", "ads", "free")
 
 
 class TMDBError(Exception):
@@ -33,6 +46,14 @@ def _image_url(path: str | None, size: str) -> str:
     if not path:
         return ""
     return f"{TMDB_IMAGE_BASE}{size}{path}"
+
+
+def _map_provider(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "provider_id": item.get("provider_id"),
+        "provider_name": item.get("provider_name", ""),
+        "logo_path": _image_url(item.get("logo_path"), TMDB_PROVIDER_LOGO_SIZE),
+    }
 
 
 class TMDBClient:
@@ -152,3 +173,42 @@ class TMDBClient:
                     }
                 )
         return episodes
+
+    async def async_get_watch_providers(self, series_id: str, region: str) -> dict[str, Any]:
+        """Holt die Streaming-Verfügbarkeit einer Serie für eine Region.
+
+        TMDB liefert die Daten (von JustWatch) verschachtelt unter
+        ``results.<region>``. Existiert die Region nicht in der Antwort
+        (keine bekannten Angebote in diesem Land), werden leere Listen
+        zurückgegeben statt eines Fehlers.
+        """
+        data = await self._request(f"/tv/{series_id}/watch/providers")
+        region_data = (data.get("results") or {}).get(region, {})
+
+        result: dict[str, Any] = {"link": region_data.get("link", "")}
+        for category in PROVIDER_CATEGORIES:
+            result[category] = [_map_provider(p) for p in region_data.get(category, [])]
+        return result
+
+    async def async_get_watch_provider_list(self, region: str) -> list[dict[str, Any]]:
+        """Holt den kompletten JustWatch/TMDB-Anbieterkatalog für Serien in einer Region."""
+        data = await self._request(
+            "/watch/providers/tv", params={"watch_region": region}
+        )
+        return [_map_provider(item) for item in data.get("results", [])]
+
+    async def async_get_watch_provider_regions(self) -> dict[str, str]:
+        """Holt die Liste aller Regionen, für die TMDB Anbieterdaten kennt."""
+        try:
+            data = await self._request("/watch/providers/regions")
+        except TMDBError as err:
+            _LOGGER.warning("Konnte Regionenliste nicht laden, nutze Fallback: %s", err)
+            return dict(FALLBACK_REGIONS)
+
+        regions = {}
+        for item in data.get("results", []):
+            code = item.get("iso_3166_1")
+            name = item.get("english_name") or item.get("native_name")
+            if code and name:
+                regions[code] = name
+        return regions or dict(FALLBACK_REGIONS)

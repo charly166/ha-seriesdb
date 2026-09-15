@@ -61,12 +61,25 @@ class TMDBStore:
             "episodes": existing.get("episodes", {}),
             "watched": existing.get("watched", {}),
             "archived": existing.get("archived", False),
+            "watch_providers": existing.get("watch_providers"),
         }
         await self._async_save()
 
     async def async_remove_series(self, series_id: str) -> None:
         self._data["series"].pop(str(series_id), None)
         await self._async_save()
+
+    def get_tracked_ids(self) -> list[str]:
+        """Liefert alle nicht-archivierten Serien-IDs.
+
+        Archivierte Serien gelten als abgeschlossen und werden vom
+        Watch-Provider-Refresh im Coordinator bewusst ausgenommen.
+        """
+        return [
+            series_id
+            for series_id, series in self._data["series"].items()
+            if not series.get("archived", False)
+        ]
 
     async def async_update_episodes(self, series_id: str, episodes: list[dict[str, Any]]) -> None:
         """Aktualisiert die bekannten Episoden einer Serie, ohne den Sehstatus zu verlieren."""
@@ -146,4 +159,22 @@ class TMDBStore:
         if series is None:
             return
         series["archived"] = bool(archived)
+        await self._async_save()
+
+    # -- Streaming-Verfügbarkeit -------------------------------------------
+
+    async def async_update_watch_providers(self, series_id: str, providers: dict[str, Any]) -> None:
+        series = self._data["series"].get(str(series_id))
+        if series is None:
+            return
+        series["watch_providers"] = {
+            "region": providers.get("region", ""),
+            "flatrate": providers.get("flatrate", []),
+            "rent": providers.get("rent", []),
+            "buy": providers.get("buy", []),
+            "ads": providers.get("ads", []),
+            "free": providers.get("free", []),
+            "link": providers.get("link", ""),
+            "fetched_at": _now(),
+        }
         await self._async_save()

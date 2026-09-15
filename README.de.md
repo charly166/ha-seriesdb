@@ -16,7 +16,14 @@
 
 Eine Home-Assistant-Integration inkl. eigener Lovelace-Karte (GUI), mit der du
 TV-Serien über die **kostenlose themoviedb.org (TMDB) API** suchen, zu einer
-Watchlist hinzufügen und einzelne Episoden als "gesehen" abhaken kannst.
+Watchlist hinzufügen und einzelne Episoden als "gesehen" abhaken kannst. Für
+jede Serie auf der Watchlist zeigt die Karte an, auf welchem Streamingdienst
+sie aktuell verfügbar ist (Abo, Leihen, Kaufen oder kostenlos mit Werbung) –
+auf Basis der von JustWatch stammenden Watch-Provider-Daten von TMDB.
+
+Dieses Projekt ist ein Schwesterprojekt von
+[HA MoviesDB](https://github.com/charly166/ha-moviesdb) mit derselben
+Architektur, aber für Filme statt Serien.
 
 <p align="center">
   <img src="docs/screenshot.png" alt="HA-SeriesDB-Karte mit Watchlist, Poster-Ansicht und Sehfortschritt" width="420">
@@ -35,21 +42,32 @@ Watchlist hinzufügen und einzelne Episoden als "gesehen" abhaken kannst.
 - **Archiv**: Serien lassen sich in der Detailansicht archivieren (z.B. wenn
   komplett gesehen und die Serie beendet ist) und wandern dann vom Reiter
   "Meine Serien" in einen eigenen "Archiv"-Reiter
+- **Wo ist die Serie verfügbar**: zeigt, auf welchen Streaminganbietern die
+  Serie aktuell verfügbar ist (Abo/Streaming, Leihen, Kaufen, kostenlos mit
+  Werbung), gruppiert nach Typ, mit Hervorhebung der eigenen konfigurierten
+  Anbieter
+- **Konfigurierbare Region und eigene Streaminganbieter**: das eigene Land
+  (Streaming-Verfügbarkeit ist länderspezifisch) sowie die tatsächlich
+  abonnierten Dienste unter Einstellungen → Geräte & Dienste → HA SeriesDB
+  → Konfigurieren auswählen
 - Kartenbreite **und -höhe** in modernen "Sections"-Dashboards per Ziehen
   anpassbar, füllt dabei exakt die zugewiesene Rasterzelle aus
 - Eigenes Icon/Logo in "Einstellungen → Geräte & Dienste" (Home Assistant
   2026.3+)
-- Automatischer Nachtrag neuer Episoden alle 12 Stunden über eine
-  Home-Assistant-Sensor-Entität pro Serie (z.B. für Automationen wie
-  "benachrichtige mich, wenn eine neue Folge verfügbar ist")
-- Services für Automationen: `ha_seriesdb.add_series`,
+- Eine Sensor-Entität pro verfolgter Serie (Sehfortschritt, nächste
+  ungesehene Episode und `available_on`-Liste der eigenen Anbieter, die die
+  Serie gerade im Abo haben) für Automationen, z.B. "benachrichtige mich,
+  wenn eine neue Folge verfügbar ist" oder "wenn eine Serie auf Netflix
+  verfügbar wird"
+- Services für Automationen: `add_series`,
   `remove_series`, `mark_episode_watched`, `mark_episode_unwatched`,
-  `mark_watched_up_to`, `mark_season_watched`, `set_archived`, `refresh`
+  `mark_watched_up_to`, `mark_season_watched`, `set_archived`, `refresh`,
+  `refresh_watch_providers`
 - Alle Daten (Watchlist + Sehstatus + Archiv) werden lokal in Home Assistant
   gespeichert (`.storage/ha_seriesdb_data`) – kein Cloud-Konto nötig,
   außer dem kostenlosen TMDB-API-Key.
 
-## Rechtliches: TMDB-Attribution & Lizenz
+## Rechtliches: TMDB- & JustWatch-Attribution, Lizenz
 
 Diese Integration nutzt die kostenlose TMDB-API. Deren Nutzungsbedingungen
 verlangen einen sichtbaren Pflichthinweis samt Logo. Die Karte zeigt diesen
@@ -69,6 +87,15 @@ Weiterverbreitung nicht gestattet:
    ```
 3. Fertig – solange die Datei fehlt, blendet die Karte den Logo-Platzhalter
    automatisch aus, zeigt aber weiterhin den Pflicht-Text an.
+
+Die Watch-Provider-Daten (Streaming-Verfügbarkeit) stammen von **JustWatch**
+und werden über die `/watch/providers`-API von TMDB bereitgestellt – dafür
+gilt eine eigene, separate Attributionspflicht (ein sichtbarer Link zurück
+zu TMDB/JustWatch, bereits in der "Verfügbar auf"-Sektion der
+Serien-Detailansicht enthalten). Das ist keine Rechtsberatung – bitte prüfe
+den aktuellen Wortlaut selbst unter
+https://developer.themoviedb.org/docs/watch-providers-attribution-requirement
+und https://www.themoviedb.org/api-terms-of-use, bevor du veröffentlichst.
 
 Der Code selbst steht unter der [MIT-Lizenz](LICENSE) und darf frei
 weiterverbreitet, verändert und veröffentlicht werden. Das im Header der
@@ -121,7 +148,25 @@ problemlos.
 **Einstellungen → Geräte & Dienste → Integration hinzufügen** → nach
 "HA SeriesDB" suchen → den API-Key eingeben.
 
-## 4. Die Karte registriert sich automatisch
+## 4. Region und Streaminganbieter konfigurieren
+
+Unter **Einstellungen → Geräte & Dienste → HA SeriesDB → Konfigurieren**
+lässt sich einstellen:
+
+- **Region**: das Land, für das die Streaming-Verfügbarkeit abgefragt wird
+  (Standard: Deutschland). Streaming-Kataloge unterscheiden sich je Land –
+  wähle die Region, aus der du tatsächlich schaust.
+- **Meine Streaminganbieter**: welche Dienste du tatsächlich abonniert hast
+  (Netflix, Disney+, Prime Video, …), ausgewählt aus der aktuellen,
+  live von TMDB geladenen Anbieterliste für deine gewählte Region. Diese
+  werden in der Serien-Detailansicht hervorgehoben und speisen das
+  `available_on`-Sensorattribut.
+
+Ein Regionswechsel wirkt sich vollständig erst beim nächsten Öffnen dieses
+Dialogs aus (die während des aktuellen Formulars angezeigte Anbieterliste
+entspricht noch der Region, die beim Öffnen aktiv war).
+
+## 5. Die Karte registriert sich automatisch
 
 Die Karte registriert sich beim Setup selbst als Lovelace-Dashboard-Ressource
 – genau so, wie es die manuelle Aktion unter „Einstellungen → Dashboards →
@@ -136,7 +181,7 @@ Schreibzugriff auf die Ressourcenliste. In dem Fall in der
 `ui-lovelace.yaml` manuell ergänzen:
 ```yaml
 resources:
-  - url: /ha_seriesdb/ha-seriesdb-card.js?v=14
+  - url: /ha_seriesdb/ha-seriesdb-card.js?v=15
     type: module
 ```
 In dem Fall musst du diese Nummer nach jedem künftigen Update selbst
@@ -144,7 +189,7 @@ erhöhen – Storage-Modus-Dashboards übernehmen das automatisch. Die exakte,
 aktuelle Versionsnummer steht immer im Log (**Einstellungen → System →
 Protokolle**, Suche nach „HA SeriesDB").
 
-## 5. Karte zum Dashboard hinzufügen
+## 6. Karte zum Dashboard hinzufügen
 
 1. Dashboard bearbeiten → **Karte hinzufügen** → ganz unten **"Manuell"**.
 2. Folgendes einfügen:
@@ -183,7 +228,7 @@ sobald die Ressourcen-URL (siehe oben) auf die neue Versionsnummer
 aktualisiert wurde – ein Hard-Reload (Strg+Shift+R) ist in der Regel nicht
 nötig, schadet aber auch nicht.
 
-## 6. Bedienung
+## 7. Bedienung
 
 - **Serie hinzufügen**: Reiter "Serie hinzufügen" → Titel eintippen (ab 2
   Zeichen wird automatisch gesucht) → bei der gewünschten Serie auf
@@ -198,6 +243,10 @@ nötig, schadet aber auch nicht.
   Über "Alle gesehen" bzw. "Alle zurücksetzen" lässt sich zusätzlich eine
   komplette Staffel auf einmal markieren. Am Ende der Episodenliste gibt es
   zusätzlich zum Link oben noch einen zweiten "Zurück zur Übersicht"-Link.
+- **Wo ist die Serie verfügbar**: die Detailansicht zeigt, auf welchen
+  Streaminganbietern die Serie aktuell verfügbar ist, gruppiert nach
+  Abo/Leihen/Kaufen/kostenlos, mit Hervorhebung der eigenen konfigurierten
+  Anbieter.
 - **Serie archivieren**: In der Detailansicht auf "Archivieren" klicken – die
   Serie wandert dann in den Reiter "Archiv" und verschwindet aus "Meine
   Serien". Ist eine Serie komplett gesehen und ihr TMDB-Status "Beendet"
@@ -226,6 +275,24 @@ automation:
             {{ trigger.to_state.attributes.next_unwatched_episode }}
 ```
 
+```yaml
+automation:
+  - alias: "Serie jetzt verfügbar"
+    trigger:
+      - platform: state
+        entity_id: sensor.game_of_thrones  # entity_id je nach Serie
+        attribute: available_on
+    condition:
+      - condition: template
+        value_template: "{{ trigger.to_state.attributes.available_on | length > 0 }}"
+    action:
+      - service: notify.mobile_app_dein_handy
+        data:
+          message: >
+            {{ trigger.to_state.name }} ist jetzt verfügbar auf
+            {{ trigger.to_state.attributes.available_on | join(', ') }}.
+```
+
 ## Technische Hinweise
 
 - Reine Python-Standardbibliothek + `aiohttp` (in Home Assistant bereits
@@ -248,6 +315,11 @@ automation:
 - `iot_class: cloud_polling` – die Integration ruft aktiv themoviedb.org ab,
   standardmäßig alle 12 Stunden für bereits verfolgte Serien, sowie bei jeder
   manuellen Suche/Hinzufügen-Aktion.
+- Die Streaming-Verfügbarkeit wird im selben 12-Stunden-Takt wie die
+  Episoden aktualisiert, allerdings nur für nicht-archivierte Serien
+  (archivierte Serien gelten als "fertig" und werden nicht mehr
+  aufgefrischt), und lässt sich zusätzlich gezielt beim Öffnen der
+  Detailansicht aktualisieren.
 - **Eigenes Icon in "Geräte & Dienste"**: Seit Home Assistant 2026.3 können
   Custom-Integrations ihr Icon/Logo direkt lokal mitbringen (Ordner
   `custom_components/ha_seriesdb/brand/` mit `icon.png`, `icon@2x.png`,
@@ -333,9 +405,9 @@ ha-seriesdb/
     ├── brand/                 Lokale Icons für "Geräte & Dienste" (HA 2026.3+)
     │   ├── icon.png / icon@2x.png
     │   └── logo.png / logo@2x.png
-    ├── config_flow.py        Einrichtungsdialog (API-Key)
+    ├── config_flow.py        Einrichtungsdialog (API-Key) + Options-Flow (Region/Anbieter)
     ├── const.py
-    ├── coordinator.py        Periodisches Nachladen neuer Episoden
+    ├── coordinator.py        Periodisches Nachladen neuer Episoden + Watch-Provider
     ├── frontend.py            Automatische Lovelace-Ressourcen-Registrierung
     ├── manifest.json
     ├── sensor.py              Eine Sensor-Entität pro verfolgter Serie
@@ -351,9 +423,9 @@ ha-seriesdb/
 
 ## Mindestanforderungen
 
-- Home Assistant **2024.5.0** oder neuer (ältere Versionen funktionieren
-  ebenfalls, nur ohne anpassbare Kartenbreite und ohne lokales Icon unter
-  "Geräte & Dienste")
+- Home Assistant **2024.12.0** oder neuer (der Options-Flow für Region/
+  Streaminganbieter nutzt die `config_entry`-Property, die Home Assistant
+  Config-Flows seit dieser Version selbst bereitstellt)
 
 ## Lizenz
 

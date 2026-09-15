@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.1.0
+
+- Added streaming availability per show, sourced from JustWatch via TMDB's
+  watch-providers API: shows which of your own configured streaming
+  services currently carry a series (subscription/rent/buy/free-with-ads),
+  filtered and highlighted against your region and subscribed providers.
+- New options flow (Settings → Devices & Services → HA SeriesDB →
+  Configure) to pick your region and your own streaming providers from a
+  searchable, alphabetically sorted list.
+- New `available_on` sensor attribute for automations (e.g. "show X is now
+  on Netflix").
+- New `refresh_watch_providers` service to force-refresh availability for a
+  single show or the whole watchlist on demand.
+
 ## 2.0.2
 
 - Fixed: checking off an episode further down in a long episode list jumped

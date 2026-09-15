@@ -22,6 +22,8 @@ from .const import (
     CARD_FILENAME,
     CARD_VERSION,
     CONF_API_KEY,
+    CONF_REGION,
+    DEFAULT_REGION,
     DOMAIN,
     PLATFORMS,
     SERVICE_ADD_SERIES,
@@ -30,6 +32,7 @@ from .const import (
     SERVICE_MARK_SEASON_WATCHED,
     SERVICE_MARK_WATCHED_UP_TO,
     SERVICE_REFRESH,
+    SERVICE_REFRESH_WATCH_PROVIDERS,
     SERVICE_REMOVE_SERIES,
     SERVICE_SET_ARCHIVED,
     SIGNAL_SERIES_ADDED,
@@ -61,7 +64,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     store = TMDBStore(hass)
     await store.async_load()
 
-    coordinator = TMDBCoordinator(hass, client, store)
+    region = entry.options.get(CONF_REGION, DEFAULT_REGION)
+    coordinator = TMDBCoordinator(hass, client, store, region)
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})
@@ -69,7 +73,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "client": client,
         "store": store,
         "coordinator": coordinator,
+        "entry": entry,
     }
+    entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
 
     # WebSocket-Befehle, Karten-Bereitstellung und Services nur beim
     # allerersten Setup registrieren.
@@ -87,6 +93,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
+
+async def _async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Bei geänderten Optionen (z.B. Region) die Integration neu laden.
+
+    Das ist der einfachste korrekte Weg, um den Coordinator mit der neuen
+    Region neu aufzusetzen.
+    """
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -125,6 +140,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
         episodes = await data["client"].async_get_episodes(series_id)
         await data["store"].async_add_series(series_id, info)
         await data["store"].async_update_episodes(series_id, episodes)
+        await data["coordinator"].async_refresh_watch_providers(series_id)
         async_dispatcher_send(hass, SIGNAL_SERIES_ADDED, series_id)
 
     async def _handle_remove_series(call: ServiceCall) -> None:
@@ -151,6 +167,14 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
     async def _handle_refresh(call: ServiceCall) -> None:
         await _entry_data()["coordinator"].async_request_refresh()
+
+    async def _handle_refresh_watch_providers(call: ServiceCall) -> None:
+        data = _entry_data()
+        series_id = call.data.get(ATTR_SERIES_ID)
+        if series_id:
+            await data["coordinator"].async_refresh_watch_providers(str(series_id))
+        else:
+            await data["coordinator"].async_request_refresh()
 
     async def _handle_set_archived(call: ServiceCall) -> None:
         await _entry_data()["store"].async_set_archived(
@@ -206,6 +230,12 @@ def _async_register_services(hass: HomeAssistant) -> None:
         ),
     )
     hass.services.async_register(DOMAIN, SERVICE_REFRESH, _handle_refresh, schema=vol.Schema({}))
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_REFRESH_WATCH_PROVIDERS,
+        _handle_refresh_watch_providers,
+        schema=vol.Schema({vol.Optional(ATTR_SERIES_ID): cv.string}),
+    )
     hass.services.async_register(
         DOMAIN,
         SERVICE_SET_ARCHIVED,

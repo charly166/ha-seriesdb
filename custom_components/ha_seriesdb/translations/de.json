@@ -17,6 +17,21 @@
       "already_configured": "HA SeriesDB ist bereits eingerichtet."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HA SeriesDB Einstellungen",
+        "description": "Wähle die Region für die Streaming-Verfügbarkeit sowie deine eigenen Streamingdienste aus. Ein Regionswechsel wirkt sich vollständig erst beim nächsten Öffnen dieses Dialogs aus.",
+        "data": {
+          "region": "Region",
+          "provider_ids": "Meine Streamingdienste"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Konnte Regions-/Anbieterdaten nicht von themoviedb.org laden, nutze eine Fallback-Liste."
+    }
+  },
   "entity": {
     "sensor": {
       "series_progress": {

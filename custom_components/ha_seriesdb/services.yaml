@@ -95,6 +95,17 @@ refresh:
   name: Aktualisieren
   description: Ruft sofort neue Episoden für alle verfolgten Serien von themoviedb.org ab.
 
+refresh_watch_providers:
+  name: Verfügbarkeit aktualisieren
+  description: Aktualisiert die Streaming-Verfügbarkeit gezielt für eine Serie (oder für die gesamte Watchlist, wenn keine Serien-ID angegeben wird).
+  fields:
+    series_id:
+      name: Serien-ID
+      description: Optional - ohne Angabe wird die gesamte Watchlist aktualisiert.
+      required: false
+      selector:
+        text:
+
 set_archived:
   name: Archivstatus setzen
   description: Verschiebt eine Serie ins Archiv oder holt sie wieder zurück.

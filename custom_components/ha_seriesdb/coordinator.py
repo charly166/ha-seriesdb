@@ -16,9 +16,11 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class TMDBCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    """Holt regelmäßig neue Episoden für alle gemerkten Serien nach."""
+    """Holt regelmäßig neue Episoden und Streaming-Verfügbarkeit nach."""
 
-    def __init__(self, hass: HomeAssistant, client: TMDBClient, store: TMDBStore) -> None:
+    def __init__(
+        self, hass: HomeAssistant, client: TMDBClient, store: TMDBStore, region: str
+    ) -> None:
         super().__init__(
             hass,
             _LOGGER,
@@ -27,6 +29,7 @@ class TMDBCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self.client = client
         self.store = store
+        self.region = region
 
     async def _async_update_data(self) -> dict[str, Any]:
         summary: dict[str, Any] = {}
@@ -38,6 +41,21 @@ class TMDBCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.warning("Konnte Episoden für Serie %s nicht aktualisieren: %s", series_id, err)
                 continue
             summary[series_id] = self.store.get_progress(series_id)
+
+        # Streaming-Verfügbarkeit nur für nicht-archivierte Serien nachladen -
+        # abgeschlossene (archivierte) Serien gelten als "fertig" und werden
+        # bewusst nicht mehr aktualisiert.
+        for series_id in self.store.get_tracked_ids():
+            try:
+                providers = await self.client.async_get_watch_providers(series_id, self.region)
+                providers["region"] = self.region
+                await self.store.async_update_watch_providers(series_id, providers)
+            except TMDBError as err:
+                _LOGGER.warning(
+                    "Konnte Streaming-Verfügbarkeit für Serie %s nicht aktualisieren: %s",
+                    series_id,
+                    err,
+                )
         return summary
 
     async def async_refresh_series(self, series_id: str) -> None:
@@ -47,3 +65,12 @@ class TMDBCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except TMDBError as err:
             raise UpdateFailed(str(err)) from err
         await self.store.async_update_episodes(series_id, episodes)
+
+    async def async_refresh_watch_providers(self, series_id: str) -> None:
+        """Aktualisiert gezielt die Streaming-Verfügbarkeit einer einzelnen Serie."""
+        try:
+            providers = await self.client.async_get_watch_providers(series_id, self.region)
+        except TMDBError as err:
+            raise UpdateFailed(str(err)) from err
+        providers["region"] = self.region
+        await self.store.async_update_watch_providers(series_id, providers)

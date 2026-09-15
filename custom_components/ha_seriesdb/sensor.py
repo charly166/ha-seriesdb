@@ -17,7 +17,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, SIGNAL_SERIES_ADDED, SIGNAL_SERIES_REMOVED
+from .const import CONF_PROVIDER_IDS, DOMAIN, SIGNAL_SERIES_ADDED, SIGNAL_SERIES_REMOVED
 from .coordinator import TMDBCoordinator
 from .store import TMDBStore
 
@@ -36,7 +36,7 @@ async def async_setup_entry(
     def _add_series_entity(series_id: str) -> None:
         if series_id in known_entities:
             return
-        entity = TMDBSeriesSensor(coordinator, store, series_id, entry.entry_id)
+        entity = TMDBSeriesSensor(coordinator, store, series_id, entry)
         known_entities[series_id] = entity
         async_add_entities([entity])
 
@@ -71,11 +71,12 @@ class TMDBSeriesSensor(CoordinatorEntity[TMDBCoordinator], SensorEntity):
     _attr_entity_category = None
 
     def __init__(
-        self, coordinator: TMDBCoordinator, store: TMDBStore, series_id: str, entry_id: str
+        self, coordinator: TMDBCoordinator, store: TMDBStore, series_id: str, entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator)
         self._store = store
         self._series_id = series_id
+        self._entry = entry
         self._attr_unique_id = f"{DOMAIN}_{series_id}"
         self._attr_translation_key = "series_progress"
 
@@ -108,7 +109,22 @@ class TMDBSeriesSensor(CoordinatorEntity[TMDBCoordinator], SensorEntity):
             "image": series.get("image"),
             "next_unwatched_episode": next_episode,
             "archived": series.get("archived", False),
+            "available_on": self._available_on(series),
         }
+
+    def _available_on(self, series: dict[str, Any]) -> list[str]:
+        """Namen der eigenen konfigurierten Anbieter, die die Serie aktuell im
+        Abo (flatrate) haben - die automatisierungsfreundliche Kernfunktion
+        ("Serie X ist jetzt auf Netflix verfügbar")."""
+        provider_ids = set(self._entry.options.get(CONF_PROVIDER_IDS, []))
+        if not provider_ids:
+            return []
+        providers = series.get("watch_providers") or {}
+        return [
+            p["provider_name"]
+            for p in providers.get("flatrate", [])
+            if p.get("provider_id") in provider_ids
+        ]
 
     @property
     def entity_picture(self) -> str | None:

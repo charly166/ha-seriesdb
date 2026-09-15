@@ -22,6 +22,15 @@
 
 const DOMAIN = "ha_seriesdb";
 
+const PROVIDER_CATEGORY_LABELS = {
+  flatrate: "Streaming (Abo)",
+  free: "Kostenlos",
+  ads: "Kostenlos mit Werbung",
+  rent: "Leihen",
+  buy: "Kaufen",
+};
+const PROVIDER_CATEGORY_ORDER = ["flatrate", "free", "ads", "rent", "buy"];
+
 // Hinweis: Es wird bewusst KEIN Google-Fonts-Import mehr genutzt (das würde
 // bei jedem Kartenaufruf die IP-Adresse an Google übertragen, was in
 // Deutschland ohne Einwilligung als DSGVO-Verstoß gilt, vgl. LG München I,
@@ -298,6 +307,11 @@ const STYLES = `
   .status-badge.returning { background: rgba(79, 178, 134, 0.18); color: var(--tmdb-watched); }
   .status-badge.ended { background: rgba(139, 147, 167, 0.2); color: var(--tmdb-text-muted); }
 
+  .available-badge {
+    font-size: 10.5px;
+    color: var(--tmdb-accent);
+  }
+
   .archive-hint {
     color: var(--tmdb-accent);
     font-size: 12.5px;
@@ -348,6 +362,42 @@ const STYLES = `
     display: inline-block;
   }
   .back-link:hover { color: var(--tmdb-accent); }
+
+  .section-title {
+    font-family: ${HEADLINE_FONT};
+    font-size: 16px;
+    font-weight: 700;
+    margin: 18px 0 8px 0;
+  }
+
+  .provider-group { margin-bottom: 12px; }
+  .provider-group .label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--tmdb-text-muted);
+    margin-bottom: 6px;
+  }
+  .provider-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .provider-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--tmdb-surface-alt);
+    opacity: 0.45;
+    border: 2px solid transparent;
+  }
+  .provider-logo.mine {
+    opacity: 1;
+    border-color: var(--tmdb-accent);
+  }
+
+  .provider-attribution {
+    font-size: 10.5px;
+    color: var(--tmdb-text-muted);
+    margin-top: 4px;
+  }
+  .provider-attribution a { color: var(--tmdb-text-muted); }
 
   .season-header {
     display: flex;
@@ -428,6 +478,7 @@ class HaSeriesDbCard extends HTMLElement {
     this._searching = false;
     this._selectedSeriesId = null;
     this._detail = null;
+    this._settings = { region: "", providers: [] };
     this._collapsedSeasons = new Set();
     this._scrollToEpisodeId = null;
     this._error = null;
@@ -448,6 +499,7 @@ class HaSeriesDbCard extends HTMLElement {
       this._initialized = true;
       this._render();
       this._loadTracked();
+      this._loadSettings();
     }
   }
 
@@ -500,6 +552,21 @@ class HaSeriesDbCard extends HTMLElement {
       this._error = "Konnte Watchlist nicht laden. Ist die Integration eingerichtet?";
     }
     this._render();
+  }
+
+  async _loadSettings() {
+    try {
+      const res = await this._hass.callWS({ type: `${DOMAIN}/get_settings` });
+      this._settings = res || { region: "", providers: [] };
+    } catch (err) {
+      // Einstellungen sind nur für die Hervorhebung wichtig - ein Fehler
+      // hier soll die Karte nicht blockieren.
+    }
+    this._render();
+  }
+
+  _myProviderIds() {
+    return new Set((this._settings.providers || []).map((p) => p.provider_id));
   }
 
   async _doSearch(query) {
@@ -581,6 +648,24 @@ class HaSeriesDbCard extends HTMLElement {
       this._error = err.message || "Serie konnte nicht geladen werden.";
     }
     this._render();
+
+    // Verfügbarkeit gezielt auffrischen statt bis zu 12h alte Daten aus dem
+    // Cache anzuzeigen, und die Einstellungen erneut laden, falls sich Region
+    // oder eigene Anbieter seit dem letzten Öffnen der Karte geändert haben.
+    this._loadSettings();
+    try {
+      const providers = await this._hass.callWS({
+        type: `${DOMAIN}/get_watch_providers`,
+        series_id: seriesId,
+      });
+      if (this._selectedSeriesId === seriesId && this._detail) {
+        this._detail.watch_providers = providers;
+        this._render();
+      }
+    } catch (err) {
+      // Watch-Provider-Refresh ist optional - der zuvor gecachte Stand aus
+      // get_series() bleibt sichtbar, falls er vorhanden ist.
+    }
   }
 
   async _toggleEpisode(episodeId, watched) {
@@ -909,6 +994,12 @@ class HaSeriesDbCard extends HTMLElement {
         cardEl.appendChild(badge);
       }
 
+      if (s.available_on && s.available_on.length) {
+        const avail = this._el("div", "available-badge");
+        avail.textContent = "Verfügbar: " + s.available_on.join(", ");
+        cardEl.appendChild(avail);
+      }
+
       const track = this._el("div", "progress-track");
       const fill = this._el("div", "progress-fill");
       fill.style.width = pct + "%";
@@ -1075,6 +1166,8 @@ class HaSeriesDbCard extends HTMLElement {
     header.appendChild(meta);
     wrap.appendChild(header);
 
+    wrap.appendChild(this._renderWatchProviders(d.watch_providers));
+
     const seasons = this._groupBySeason(d.episodes || []);
     const seasonList = this._el("div", "season-list");
     for (const [seasonNumber, episodes] of seasons) {
@@ -1169,6 +1262,80 @@ class HaSeriesDbCard extends HTMLElement {
       this._render();
     });
     wrap.appendChild(backBottom);
+
+    return wrap;
+  }
+
+  _renderWatchProviders(providers) {
+    const wrap = this._el("div");
+    const title = this._el("div", "section-title");
+    title.textContent = "Verfügbar auf";
+    wrap.appendChild(title);
+
+    if (!providers) {
+      const loading = this._el("div", "loading");
+      loading.textContent = "Lade Verfügbarkeit …";
+      wrap.appendChild(loading);
+      return wrap;
+    }
+
+    const myIds = this._myProviderIds();
+    let hasAny = false;
+    for (const category of PROVIDER_CATEGORY_ORDER) {
+      const list = providers[category] || [];
+      if (!list.length) continue;
+      hasAny = true;
+
+      const group = this._el("div", "provider-group");
+      const label = this._el("div", "label");
+      label.textContent = PROVIDER_CATEGORY_LABELS[category] || category;
+      group.appendChild(label);
+
+      const row = this._el("div", "provider-row");
+      for (const p of list) {
+        const logo = document.createElement("img");
+        logo.className = "provider-logo" + (myIds.has(p.provider_id) ? " mine" : "");
+        logo.title = p.provider_name;
+        logo.alt = p.provider_name;
+        if (p.logo_path) logo.src = p.logo_path;
+        row.appendChild(logo);
+      }
+      group.appendChild(row);
+      wrap.appendChild(group);
+    }
+
+    if (!hasAny) {
+      const empty = this._el("div", "empty");
+      empty.textContent = this._settings.region
+        ? `Aktuell keine bekannte Streaming-Verfügbarkeit in ${this._settings.region}.`
+        : "Aktuell keine bekannte Streaming-Verfügbarkeit.";
+      wrap.appendChild(empty);
+    }
+
+    if (myIds.size === 0) {
+      const hint = this._el("div", "hint");
+      hint.textContent =
+        "Tipp: Trage deine Streamingdienste unter Einstellungen → Geräte & Dienste → HA SeriesDB → Konfigurieren ein, damit sie hier hervorgehoben werden.";
+      wrap.appendChild(hint);
+    }
+
+    // Pflicht-Attribution laut TMDB Watch-Provider-API-Nutzungsbedingungen
+    // (https://developer.themoviedb.org/docs/watch-providers-attribution-requirement):
+    // Die Verfügbarkeitsdaten stammen von JustWatch und werden über TMDB
+    // durchgereicht.
+    const attribution = this._el("div", "provider-attribution");
+    if (providers.link) {
+      const link = document.createElement("a");
+      link.href = providers.link;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "Alle Optionen auf TMDB ansehen";
+      attribution.appendChild(link);
+      attribution.append(" · Daten von JustWatch, bereitgestellt über TMDB.");
+    } else {
+      attribution.textContent = "Verfügbarkeitsdaten von JustWatch, bereitgestellt über TMDB.";
+    }
+    wrap.appendChild(attribution);
 
     return wrap;
   }

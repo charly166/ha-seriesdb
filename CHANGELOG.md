@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.2.0
+
+- New "Open" tab between "My Shows" and "Archive": lists only shows that
+  have episodes which have already aired but are not yet watched (episodes
+  announced for the future don't count). The tab shows a counter like the
+  other tabs.
+- The card now remembers the last selected tab (stored locally in the
+  browser's localStorage, nothing is sent anywhere).
+- Tab bar scrolls horizontally on very narrow screens instead of overflowing.
+
 ## 2.1.0
 
 - Added streaming availability per show, sourced from JustWatch via TMDB's

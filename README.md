@@ -163,7 +163,7 @@ Home Assistant not allow integrations to write to the resource list at all.
 In that case, add this to your `ui-lovelace.yaml` manually:
 ```yaml
 resources:
-  - url: /ha_seriesdb/ha-seriesdb-card.js?v=15
+  - url: /ha_seriesdb/ha-seriesdb-card.js?v=16
     type: module
 ```
 You'll need to bump the `?v=...` number yourself after each future update in
@@ -178,8 +178,9 @@ Logs**, search for "HA SeriesDB").
    ```yaml
    type: custom:ha-seriesdb-card
    ```
-3. Save. The card shows three tabs: "My Shows", "Archive", and "Add Show"
-   (search).
+3. Save. The card shows four tabs: "My Shows", "Open" (shows with aired but
+   unwatched episodes), "Archive", and "Add Show" (search). The card
+   remembers the last selected tab in your browser.
 
 If your dashboard view uses the **"Sections"** layout (the default for new
 dashboards since Home Assistant 2024.5), you can resize both the width and

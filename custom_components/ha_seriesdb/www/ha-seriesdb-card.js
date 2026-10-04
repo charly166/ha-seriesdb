@@ -22,6 +22,9 @@
 
 const DOMAIN = "ha_seriesdb";
 
+const TAB_IDS = ["mine", "open", "archive", "search"];
+const ACTIVE_TAB_STORAGE_KEY = `${DOMAIN}_active_tab`;
+
 const PROVIDER_CATEGORY_LABELS = {
   flatrate: "Streaming (Abo)",
   free: "Kostenlos",
@@ -121,11 +124,17 @@ const STYLES = `
     gap: 4px;
     padding: 0 20px;
     background: var(--tmdb-surface);
+    /* Vier Reiter passen auf schmalen Displays nicht immer nebeneinander. */
+    overflow-x: auto;
+    scrollbar-width: none;
   }
+  .tabs::-webkit-scrollbar { display: none; }
 
   .tab {
     padding: 10px 4px;
-    margin-right: 20px;
+    margin-right: 16px;
+    white-space: nowrap;
+    flex: 0 0 auto;
     font-size: 14px;
     font-weight: 600;
     color: var(--tmdb-text-muted);
@@ -471,7 +480,7 @@ class HaSeriesDbCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._activeTab = "mine";
+    this._activeTab = this._loadActiveTab();
     this._tracked = [];
     this._searchQuery = "";
     this._searchResults = null;
@@ -491,6 +500,29 @@ class HaSeriesDbCard extends HTMLElement {
 
   setConfig(config) {
     this._config = config || {};
+  }
+
+  // Zuletzt gewählter Reiter wird rein lokal im Browser gemerkt (localStorage,
+  // keine Übertragung an Dritte). Zugriff kann z.B. im privaten Modus
+  // scheitern - dann startet die Karte einfach wie bisher bei "Meine Serien".
+  _loadActiveTab() {
+    try {
+      const saved = window.localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
+      if (TAB_IDS.includes(saved)) return saved;
+    } catch {
+      // ignorieren
+    }
+    return "mine";
+  }
+
+  _setActiveTab(tab) {
+    this._activeTab = tab;
+    try {
+      window.localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
+    } catch {
+      // ignorieren
+    }
+    this._render();
   }
 
   set hass(hass) {
@@ -843,6 +875,8 @@ class HaSeriesDbCard extends HTMLElement {
       body.appendChild(this._renderDetail());
     } else if (this._activeTab === "mine") {
       body.appendChild(this._renderMine());
+    } else if (this._activeTab === "open") {
+      body.appendChild(this._renderOpen());
     } else if (this._activeTab === "archive") {
       body.appendChild(this._renderArchive());
     } else {
@@ -914,31 +948,24 @@ class HaSeriesDbCard extends HTMLElement {
     wrap.appendChild(header);
 
     if (!this._selectedSeriesId) {
+      const withCount = (label, n) => `${label}${n ? " (" + n + ")" : ""}`;
       const activeCount = this._tracked.filter((s) => !s.archived).length;
+      const openCount = this._tracked.filter((s) => this._isOpen(s)).length;
       const archivedCount = this._tracked.filter((s) => s.archived).length;
 
+      const tabDefs = [
+        ["mine", withCount("Meine Serien", activeCount)],
+        ["open", withCount("Offen", openCount)],
+        ["archive", withCount("Archiv", archivedCount)],
+        ["search", "Serie hinzufügen"],
+      ];
       const tabs = this._el("div", "tabs");
-      const tabMine = this._el("div", "tab" + (this._activeTab === "mine" ? " active" : ""));
-      tabMine.textContent = `Meine Serien${activeCount ? " (" + activeCount + ")" : ""}`;
-      tabMine.addEventListener("click", () => {
-        this._activeTab = "mine";
-        this._render();
-      });
-      const tabArchive = this._el("div", "tab" + (this._activeTab === "archive" ? " active" : ""));
-      tabArchive.textContent = `Archiv${archivedCount ? " (" + archivedCount + ")" : ""}`;
-      tabArchive.addEventListener("click", () => {
-        this._activeTab = "archive";
-        this._render();
-      });
-      const tabSearch = this._el("div", "tab" + (this._activeTab === "search" ? " active" : ""));
-      tabSearch.textContent = "Serie hinzufügen";
-      tabSearch.addEventListener("click", () => {
-        this._activeTab = "search";
-        this._render();
-      });
-      tabs.appendChild(tabMine);
-      tabs.appendChild(tabArchive);
-      tabs.appendChild(tabSearch);
+      for (const [id, label] of tabDefs) {
+        const tab = this._el("div", "tab" + (this._activeTab === id ? " active" : ""));
+        tab.textContent = label;
+        tab.addEventListener("click", () => this._setActiveTab(id));
+        tabs.appendChild(tab);
+      }
       wrap.appendChild(tabs);
     }
     return wrap;
@@ -948,6 +975,17 @@ class HaSeriesDbCard extends HTMLElement {
     return this._renderSeriesGrid(
       this._tracked.filter((s) => !s.archived),
       "Noch keine Serien in der Watchlist. Wechsle oben zu „Serie hinzufügen“, um loszulegen."
+    );
+  }
+
+  _isOpen(s) {
+    return !s.archived && (s.open_episodes || 0) > 0;
+  }
+
+  _renderOpen() {
+    return this._renderSeriesGrid(
+      this._tracked.filter((s) => this._isOpen(s)),
+      "Keine Serie mit offenen Episoden – du bist auf dem aktuellen Stand."
     );
   }
 

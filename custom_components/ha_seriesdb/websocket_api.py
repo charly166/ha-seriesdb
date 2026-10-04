@@ -11,6 +11,7 @@ import voluptuous as vol
 
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from .api import TMDBError
 from .const import CONF_PROVIDER_IDS, DEFAULT_REGION, CONF_REGION, DOMAIN
@@ -71,9 +72,18 @@ async def ws_list_tracked(hass: HomeAssistant, connection: websocket_api.ActiveC
         return
     store = entry_data["store"]
     provider_ids = _configured_provider_ids(entry_data)
+    today = dt_util.now().date().isoformat()
     series_list = []
     for series_id, series in store.get_all_series().items():
         progress = store.get_progress(series_id)
+        watched_ids = series.get("watched", {})
+        # Offen = bereits ausgestrahlt, aber noch nicht gesehen. Angekündigte
+        # Folgen in der Zukunft (oder ohne Datum) zählen bewusst nicht mit.
+        open_episodes = sum(
+            1
+            for ep in series.get("episodes", {}).values()
+            if ep.get("aired") and ep["aired"] <= today and ep["episode_id"] not in watched_ids
+        )
         series_list.append(
             {
                 "series_id": series_id,
@@ -83,6 +93,7 @@ async def ws_list_tracked(hass: HomeAssistant, connection: websocket_api.ActiveC
                 "network": series.get("network"),
                 "total_episodes": progress["total"],
                 "watched_episodes": progress["watched"],
+                "open_episodes": open_episodes,
                 "archived": series.get("archived", False),
                 "available_on": _available_on(series, provider_ids),
             }

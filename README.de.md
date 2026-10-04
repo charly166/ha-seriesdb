@@ -181,7 +181,7 @@ Schreibzugriff auf die Ressourcenliste. In dem Fall in der
 `ui-lovelace.yaml` manuell ergänzen:
 ```yaml
 resources:
-  - url: /ha_seriesdb/ha-seriesdb-card.js?v=15
+  - url: /ha_seriesdb/ha-seriesdb-card.js?v=16
     type: module
 ```
 In dem Fall musst du diese Nummer nach jedem künftigen Update selbst
@@ -196,8 +196,10 @@ Protokolle**, Suche nach „HA SeriesDB").
    ```yaml
    type: custom:ha-seriesdb-card
    ```
-3. Speichern. Die Karte zeigt drei Reiter: "Meine Serien", "Archiv" und
-   "Serie hinzufügen" (Suche).
+3. Speichern. Die Karte zeigt vier Reiter: "Meine Serien", "Offen" (Serien
+   mit bereits ausgestrahlten, aber ungesehenen Episoden), "Archiv" und
+   "Serie hinzufügen" (Suche). Der zuletzt gewählte Reiter wird im Browser
+   gemerkt.
 
 Nutzt du eine Dashboard-Ansicht vom Typ **"Sections"** (seit Home Assistant
 2024.5 der Standard für neue Dashboards), kannst du sowohl Breite als auch

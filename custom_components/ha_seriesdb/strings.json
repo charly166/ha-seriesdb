@@ -7,6 +7,13 @@
         "data": {
           "api_key": "API key"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate HA SeriesDB",
+        "description": "themoviedb.org rejected the stored API key. Enter a new API key. You can create one at {url}.",
+        "data": {
+          "api_key": "API key"
+        }
       }
     },
     "error": {
@@ -14,7 +21,8 @@
       "cannot_connect": "Could not connect to themoviedb.org."
     },
     "abort": {
-      "already_configured": "HA SeriesDB is already configured."
+      "already_configured": "HA SeriesDB is already configured.",
+      "reauth_successful": "The API key was updated successfully."
     }
   },
   "options": {

@@ -7,6 +7,13 @@
         "data": {
           "api_key": "API-Key"
         }
+      },
+      "reauth_confirm": {
+        "title": "HA SeriesDB neu authentifizieren",
+        "description": "themoviedb.org hat den gespeicherten API-Key abgelehnt. Gib einen neuen API-Key ein. Du kannst ihn unter {url} erstellen.",
+        "data": {
+          "api_key": "API-Key"
+        }
       }
     },
     "error": {
@@ -14,7 +21,8 @@
       "cannot_connect": "Verbindung zu themoviedb.org nicht möglich."
     },
     "abort": {
-      "already_configured": "HA SeriesDB ist bereits eingerichtet."
+      "already_configured": "HA SeriesDB ist bereits eingerichtet.",
+      "reauth_successful": "Der API-Key wurde erfolgreich aktualisiert."
     }
   },
   "options": {

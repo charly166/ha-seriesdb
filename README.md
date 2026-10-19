@@ -48,6 +48,8 @@ built on the same architecture, but for movies instead of TV shows.
 - Card width **and height** are resizable by dragging in modern "Sections"
   dashboards, filling exactly the assigned grid cell
 - Own icon/logo under Settings → Devices & Services (Home Assistant 2026.3+)
+- Card UI in **English and German**, following the language of the logged-in
+  Home Assistant user (other languages fall back to English)
 - A sensor entity per tracked show (watch progress, next unwatched episode,
   and `available_on` list of your own providers currently streaming it) for
   use in automations, e.g. "notify me when a show becomes available on
@@ -163,7 +165,7 @@ Home Assistant not allow integrations to write to the resource list at all.
 In that case, add this to your `ui-lovelace.yaml` manually:
 ```yaml
 resources:
-  - url: /ha_seriesdb/ha-seriesdb-card.js?v=16
+  - url: /ha_seriesdb/ha-seriesdb-card.js?v=17
     type: module
 ```
 You'll need to bump the `?v=...` number yourself after each future update in
@@ -271,6 +273,14 @@ automation:
   parameter on every request – no separate login/token refresh needed.
 - Episodes are fetched one season at a time (`/tv/{id}/season/{n}`), since
   TMDB doesn't offer a single "all episodes of this show" endpoint.
+- **Languages:** The card UI is available in English and German and follows
+  the language of the logged-in Home Assistant user (all other languages fall
+  back to English). Further languages can be added without touching any code:
+  put a `<lang>.json` file (e.g. `fr.json`) into
+  `custom_components/ha_seriesdb/www/translations/`, using the keys from the `en`
+  block at the top of `ha-seriesdb-card.js` – missing keys fall back to English. Pull
+  requests with new languages are welcome. Movie/show titles and descriptions
+  themselves come from TMDB in German (see below).
 - Text/descriptions default to **German** (`language=de-DE`), matching this
   project's origin. Change the `TMDB_LANGUAGE` constant in `const.py` (e.g.
   to `en-US`) if you'd prefer another language – TMDB may return an empty

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.3.0
+
+- The card UI is now available in **English and German** and follows the
+  language of the logged-in Home Assistant user (previously everything was
+  hard-coded German). All other languages fall back to English.
+- Further languages can be added without code changes by placing a
+  `<lang>.json` file (e.g. `fr.json`) into `www/translations/`; missing keys
+  fall back to English.
+- Error messages from the backend are now shown in the card's language.
+
 ## 2.2.0
 
 - New "Open" tab between "My Shows" and "Archive": lists only shows that

@@ -22,16 +22,180 @@
 
 const DOMAIN = "ha_seriesdb";
 
+// --- Mehrsprachigkeit -------------------------------------------------------
+// Die Kartensprache folgt der Sprache des angemeldeten Home-Assistant-Benutzers
+// (hass.locale.language). Deutsch und Englisch sind fest eingebaut. Für weitere
+// Sprachen lädt die Karte optional www/translations/<sprache>.json (z.B.
+// fr.json) - fehlt die Datei oder ein Schlüssel, wird Englisch verwendet.
+const TRANSLATIONS = {
+  de: {
+    tab_mine: "Meine Serien",
+    tab_open: "Offen",
+    tab_archive: "Archiv",
+    tab_search: "Serie hinzufügen",
+    empty_mine: "Noch keine Serien in der Watchlist. Wechsle oben zu „Serie hinzufügen“, um loszulegen.",
+    empty_open: "Keine Serie mit offenen Episoden – du bist auf dem aktuellen Stand.",
+    empty_archive: "Noch keine archivierten Serien. Du kannst eine Serie in ihrer Detailansicht archivieren, sobald sie komplett gesehen ist.",
+    status_returning: "Wiederkehrend",
+    status_planned: "Geplant",
+    status_in_production: "In Produktion",
+    status_ended: "Beendet",
+    status_canceled: "Abgesetzt",
+    status_pilot: "Pilotfolge",
+    available: "Verfügbar: {list}",
+    episodes_progress: "{watched} / {total} Episoden",
+    search_placeholder: "Serientitel eingeben …",
+    data_source: "Datenquelle: themoviedb.org (kostenlose API)",
+    searching: "Suche läuft …",
+    no_results: "Keine Treffer.",
+    added: "Hinzugefügt",
+    add: "Hinzufügen",
+    back: "‹ Zurück zur Übersicht",
+    loading_series: "Lade Serie …",
+    archive_hint: "Komplett gesehen und abgeschlossen – jetzt archivieren?",
+    archive: "Archivieren",
+    unarchive: "Aus Archiv zurückholen",
+    remove: "Aus Watchlist entfernen",
+    season_specials: "Specials",
+    season_n: "Staffel {n}",
+    season_reset: "Alle zurücksetzen",
+    season_all: "Alle gesehen",
+    available_on_title: "Verfügbar auf",
+    loading_availability: "Lade Verfügbarkeit …",
+    cat_flatrate: "Streaming (Abo)",
+    cat_free: "Kostenlos",
+    cat_ads: "Kostenlos mit Werbung",
+    cat_rent: "Leihen",
+    cat_buy: "Kaufen",
+    no_availability_region: "Aktuell keine bekannte Streaming-Verfügbarkeit in {region}.",
+    no_availability: "Aktuell keine bekannte Streaming-Verfügbarkeit.",
+    hint_providers: "Tipp: Trage deine Streamingdienste unter Einstellungen → Geräte & Dienste → HA SeriesDB → Konfigurieren ein, damit sie hier hervorgehoben werden.",
+    all_options_link: "Alle Optionen auf TMDB ansehen",
+    attribution_suffix: " · Daten von JustWatch, bereitgestellt über TMDB.",
+    attribution_only: "Verfügbarkeitsdaten von JustWatch, bereitgestellt über TMDB.",
+    series_fallback: "Serie",
+    added_toast: "„{title}“ wurde zur Watchlist hinzugefügt.",
+    err_load_list: "Konnte Watchlist nicht laden. Ist die Integration eingerichtet?",
+    err_search: "Suche fehlgeschlagen.",
+    err_add: "Serie konnte nicht hinzugefügt werden.",
+    err_remove: "Serie konnte nicht entfernt werden.",
+    err_load_series: "Serie konnte nicht geladen werden.",
+    err_episode: "Konnte Episode nicht aktualisieren.",
+    err_episodes: "Konnte Episoden nicht aktualisieren.",
+    err_season: "Konnte Staffel nicht aktualisieren.",
+    err_archived: "Konnte Archivstatus nicht ändern.",
+    err_not_configured: "Die Integration ist nicht eingerichtet.",
+    err_not_found: "Die Serie wird nicht verfolgt.",
+    err_tmdb: "Fehler bei der Kommunikation mit themoviedb.org. Details stehen im Home-Assistant-Log.",
+    editor_text: "Diese Karte hat keine Konfigurationsoptionen. Breite und Höhe lassen sich über den Reiter „Layout“ einstellen. Region und eigene Streamingdienste werden unter Einstellungen → Geräte & Dienste → HA SeriesDB → Konfigurieren eingestellt.",
+    card_description: "Serien-Watchlist mit themoviedb.org als Datenquelle – Episoden abhaken.",
+  },
+  en: {
+    tab_mine: "My shows",
+    tab_open: "Open",
+    tab_archive: "Archive",
+    tab_search: "Add show",
+    empty_mine: "No shows on your watchlist yet. Switch to “Add show” above to get started.",
+    empty_open: "No show with open episodes – you're all caught up.",
+    empty_archive: "No archived shows yet. You can archive a show in its detail view once you've watched it completely.",
+    status_returning: "Returning",
+    status_planned: "Planned",
+    status_in_production: "In production",
+    status_ended: "Ended",
+    status_canceled: "Canceled",
+    status_pilot: "Pilot",
+    available: "Available: {list}",
+    episodes_progress: "{watched} / {total} episodes",
+    search_placeholder: "Enter show title …",
+    data_source: "Data source: themoviedb.org (free API)",
+    searching: "Searching …",
+    no_results: "No results.",
+    added: "Added",
+    add: "Add",
+    back: "‹ Back to overview",
+    loading_series: "Loading show …",
+    archive_hint: "Fully watched and finished – archive it now?",
+    archive: "Archive",
+    unarchive: "Restore from archive",
+    remove: "Remove from watchlist",
+    season_specials: "Specials",
+    season_n: "Season {n}",
+    season_reset: "Reset all",
+    season_all: "Mark all watched",
+    available_on_title: "Available on",
+    loading_availability: "Loading availability …",
+    cat_flatrate: "Streaming (subscription)",
+    cat_free: "Free",
+    cat_ads: "Free with ads",
+    cat_rent: "Rent",
+    cat_buy: "Buy",
+    no_availability_region: "No known streaming availability in {region} right now.",
+    no_availability: "No known streaming availability right now.",
+    hint_providers: "Tip: Enter your streaming services under Settings → Devices & Services → HA SeriesDB → Configure to have them highlighted here.",
+    all_options_link: "See all options on TMDB",
+    attribution_suffix: " · Data from JustWatch, provided via TMDB.",
+    attribution_only: "Availability data from JustWatch, provided via TMDB.",
+    series_fallback: "Show",
+    added_toast: "“{title}” was added to the watchlist.",
+    err_load_list: "Could not load the watchlist. Is the integration set up?",
+    err_search: "Search failed.",
+    err_add: "Could not add the show.",
+    err_remove: "Could not remove the show.",
+    err_load_series: "Could not load the show.",
+    err_episode: "Could not update the episode.",
+    err_episodes: "Could not update the episodes.",
+    err_season: "Could not update the season.",
+    err_archived: "Could not change the archive status.",
+    err_not_configured: "The integration is not set up.",
+    err_not_found: "This show is not on your watchlist.",
+    err_tmdb: "Error communicating with themoviedb.org. See the Home Assistant log for details.",
+    editor_text: "This card has no configuration options. Width and height can be set on the “Layout” tab. Region and your own streaming services are set under Settings → Devices & Services → HA SeriesDB → Configure.",
+    card_description: "TV show watchlist using themoviedb.org as data source – check off episodes.",
+  },
+};
+
+const EXTRA_TABLES = {};
+
+function detectLang(hass) {
+  const raw =
+    (hass && ((hass.locale && hass.locale.language) || hass.language)) ||
+    (typeof navigator !== "undefined" ? navigator.language : "") ||
+    "en";
+  const lang = String(raw).toLowerCase().split(/[-_]/)[0];
+  return /^[a-z]{2,3}$/.test(lang) ? lang : "en";
+}
+
+function loadExtraTable(lang, onLoaded) {
+  if (TRANSLATIONS[lang] || lang in EXTRA_TABLES) return;
+  EXTRA_TABLES[lang] = null;
+  fetch(`/${DOMAIN}/translations/${lang}.json`)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((table) => {
+      if (table && typeof table === "object") {
+        EXTRA_TABLES[lang] = table;
+        onLoaded();
+      }
+    })
+    .catch(() => {
+      // Keine Übersetzungsdatei für diese Sprache - Englisch bleibt aktiv.
+    });
+}
+
+function translate(lang, key, vars) {
+  const table = TRANSLATIONS[lang] || EXTRA_TABLES[lang] || {};
+  let text = table[key] !== undefined ? table[key] : TRANSLATIONS.en[key];
+  if (text === undefined) return key;
+  if (vars) {
+    for (const [name, value] of Object.entries(vars)) {
+      text = text.split(`{${name}}`).join(String(value));
+    }
+  }
+  return text;
+}
+
 const TAB_IDS = ["mine", "open", "archive", "search"];
 const ACTIVE_TAB_STORAGE_KEY = `${DOMAIN}_active_tab`;
 
-const PROVIDER_CATEGORY_LABELS = {
-  flatrate: "Streaming (Abo)",
-  free: "Kostenlos",
-  ads: "Kostenlos mit Werbung",
-  rent: "Leihen",
-  buy: "Kaufen",
-};
 const PROVIDER_CATEGORY_ORDER = ["flatrate", "free", "ads", "rent", "buy"];
 
 // Hinweis: Es wird bewusst KEIN Google-Fonts-Import mehr genutzt (das würde
@@ -527,6 +691,7 @@ class HaSeriesDbCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    loadExtraTable(detectLang(hass), () => this._render());
     if (!this._initialized) {
       this._initialized = true;
       this._render();
@@ -581,7 +746,7 @@ class HaSeriesDbCard extends HTMLElement {
       this._tracked = res.series || [];
       this._error = null;
     } catch (err) {
-      this._error = "Konnte Watchlist nicht laden. Ist die Integration eingerichtet?";
+      this._error = this._t("err_load_list");
     }
     this._render();
   }
@@ -609,7 +774,7 @@ class HaSeriesDbCard extends HTMLElement {
       this._searchResults = res.results || [];
       this._error = null;
     } catch (err) {
-      this._error = err.message || "Suche fehlgeschlagen.";
+      this._error = this._errText(err, "err_search");
       this._searchResults = [];
     }
     this._searching = false;
@@ -625,7 +790,9 @@ class HaSeriesDbCard extends HTMLElement {
       await this._hass.callWS({ type: `${DOMAIN}/add_series`, series_id: seriesId });
       await this._loadTracked();
       // Kurze Überblendung (Toast) anzeigen, bevor das Suchfeld geleert wird
-      this._successMessage = `„${item ? item.name : "Serie"}" wurde zur Watchlist hinzugefügt.`;
+      this._successMessage = this._t("added_toast", {
+        title: item ? item.name : this._t("series_fallback"),
+      });
       if (item) item.tracked = true;
       this._render();
       clearTimeout(this._successTimeout);
@@ -643,7 +810,7 @@ class HaSeriesDbCard extends HTMLElement {
         this._render();
       }, 1000);
     } catch (err) {
-      this._error = err.message || "Serie konnte nicht hinzugefügt werden.";
+      this._error = this._errText(err, "err_add");
       this._render();
     }
   }
@@ -652,7 +819,7 @@ class HaSeriesDbCard extends HTMLElement {
     try {
       await this._hass.callWS({ type: `${DOMAIN}/remove_series`, series_id: seriesId });
     } catch (err) {
-      this._error = err.message || "Serie konnte nicht entfernt werden.";
+      this._error = this._errText(err, "err_remove");
     }
     if (this._selectedSeriesId === seriesId) {
       this._selectedSeriesId = null;
@@ -677,7 +844,7 @@ class HaSeriesDbCard extends HTMLElement {
         }
       }
     } catch (err) {
-      this._error = err.message || "Serie konnte nicht geladen werden.";
+      this._error = this._errText(err, "err_load_series");
     }
     this._render();
 
@@ -714,7 +881,7 @@ class HaSeriesDbCard extends HTMLElement {
       });
     } catch (err) {
       if (ep) ep.watched = !watched; // zurückrollen
-      this._error = err.message || "Konnte Episode nicht aktualisieren.";
+      this._error = this._errText(err, "err_episode");
       this._render();
     }
     this._loadTracked();
@@ -758,7 +925,7 @@ class HaSeriesDbCard extends HTMLElement {
       });
     } catch (err) {
       changed.forEach((e) => (e.watched = false)); // zurückrollen
-      this._error = err.message || "Konnte Episoden nicht aktualisieren.";
+      this._error = this._errText(err, "err_episodes");
       this._render();
     }
     this._loadTracked();
@@ -778,7 +945,7 @@ class HaSeriesDbCard extends HTMLElement {
         watched,
       });
     } catch (err) {
-      this._error = err.message || "Konnte Staffel nicht aktualisieren.";
+      this._error = this._errText(err, "err_season");
     }
     this._loadTracked();
   }
@@ -791,22 +958,34 @@ class HaSeriesDbCard extends HTMLElement {
         this._detail.archived = archived;
       }
     } catch (err) {
-      this._error = err.message || "Konnte Archivstatus nicht ändern.";
+      this._error = this._errText(err, "err_archived");
     }
     await this._loadTracked();
     this._render();
   }
 
+  _t(key, vars) {
+    return translate(detectLang(this._hass), key, vars);
+  }
+
+  _errText(err, fallbackKey) {
+    const code = err && err.code;
+    if (code === "not_configured") return this._t("err_not_configured");
+    if (code === "not_found") return this._t("err_not_found");
+    if (code === "tmdb_error") return this._t("err_tmdb");
+    return this._t(fallbackKey);
+  }
+
   _statusLabel(status) {
-    const labels = {
-      "Returning Series": "Wiederkehrend",
-      "Planned": "Geplant",
-      "In Production": "In Produktion",
-      "Ended": "Beendet",
-      "Canceled": "Abgesetzt",
-      "Pilot": "Pilotfolge",
+    const keys = {
+      "Returning Series": "status_returning",
+      "Planned": "status_planned",
+      "In Production": "status_in_production",
+      "Ended": "status_ended",
+      "Canceled": "status_canceled",
+      "Pilot": "status_pilot",
     };
-    return labels[status] || status || "";
+    return keys[status] ? this._t(keys[status]) : status || "";
   }
 
   _isEndedStatus(status) {
@@ -954,10 +1133,10 @@ class HaSeriesDbCard extends HTMLElement {
       const archivedCount = this._tracked.filter((s) => s.archived).length;
 
       const tabDefs = [
-        ["mine", withCount("Meine Serien", activeCount)],
-        ["open", withCount("Offen", openCount)],
-        ["archive", withCount("Archiv", archivedCount)],
-        ["search", "Serie hinzufügen"],
+        ["mine", withCount(this._t("tab_mine"), activeCount)],
+        ["open", withCount(this._t("tab_open"), openCount)],
+        ["archive", withCount(this._t("tab_archive"), archivedCount)],
+        ["search", this._t("tab_search")],
       ];
       const tabs = this._el("div", "tabs");
       for (const [id, label] of tabDefs) {
@@ -974,7 +1153,7 @@ class HaSeriesDbCard extends HTMLElement {
   _renderMine() {
     return this._renderSeriesGrid(
       this._tracked.filter((s) => !s.archived),
-      "Noch keine Serien in der Watchlist. Wechsle oben zu „Serie hinzufügen“, um loszulegen."
+      this._t("empty_mine")
     );
   }
 
@@ -985,14 +1164,14 @@ class HaSeriesDbCard extends HTMLElement {
   _renderOpen() {
     return this._renderSeriesGrid(
       this._tracked.filter((s) => this._isOpen(s)),
-      "Keine Serie mit offenen Episoden – du bist auf dem aktuellen Stand."
+      this._t("empty_open")
     );
   }
 
   _renderArchive() {
     return this._renderSeriesGrid(
       this._tracked.filter((s) => s.archived),
-      "Noch keine archivierten Serien. Du kannst eine Serie in ihrer Detailansicht archivieren, sobald sie komplett gesehen ist."
+      this._t("empty_archive")
     );
   }
 
@@ -1034,7 +1213,7 @@ class HaSeriesDbCard extends HTMLElement {
 
       if (s.available_on && s.available_on.length) {
         const avail = this._el("div", "available-badge");
-        avail.textContent = "Verfügbar: " + s.available_on.join(", ");
+        avail.textContent = this._t("available", { list: s.available_on.join(", ") });
         cardEl.appendChild(avail);
       }
 
@@ -1045,7 +1224,7 @@ class HaSeriesDbCard extends HTMLElement {
       cardEl.appendChild(track);
 
       const label = this._el("div", "progress-label");
-      label.textContent = `${watched} / ${total} Episoden`;
+      label.textContent = this._t("episodes_progress", { watched, total });
       cardEl.appendChild(label);
 
       grid.appendChild(cardEl);
@@ -1059,7 +1238,7 @@ class HaSeriesDbCard extends HTMLElement {
     const row = this._el("div", "search-row");
     const input = document.createElement("input");
     input.type = "text";
-    input.placeholder = "Serientitel eingeben …";
+    input.placeholder = this._t("search_placeholder");
     input.value = this._searchQuery;
     input.dataset.focusId = "search-input";
     input.addEventListener("input", (e) => {
@@ -1079,12 +1258,12 @@ class HaSeriesDbCard extends HTMLElement {
     wrap.appendChild(row);
 
     const hint = this._el("div", "hint");
-    hint.textContent = "Datenquelle: themoviedb.org (kostenlose API)";
+    hint.textContent = this._t("data_source");
     wrap.appendChild(hint);
 
     if (this._searching) {
       const loading = this._el("div", "loading");
-      loading.textContent = "Suche läuft …";
+      loading.textContent = this._t("searching");
       wrap.appendChild(loading);
       return wrap;
     }
@@ -1095,7 +1274,7 @@ class HaSeriesDbCard extends HTMLElement {
 
     if (!this._searchResults.length) {
       const empty = this._el("div", "empty");
-      empty.textContent = "Keine Treffer.";
+      empty.textContent = this._t("no_results");
       wrap.appendChild(empty);
       return wrap;
     }
@@ -1121,10 +1300,10 @@ class HaSeriesDbCard extends HTMLElement {
       const btn = document.createElement("button");
       btn.className = "pill";
       if (r.tracked) {
-        btn.textContent = "Hinzugefügt";
+        btn.textContent = this._t("added");
         btn.disabled = true;
       } else {
-        btn.textContent = "Hinzufügen";
+        btn.textContent = this._t("add");
         btn.addEventListener("click", () => this._addSeries(r.series_id));
       }
       row2.appendChild(btn);
@@ -1138,7 +1317,7 @@ class HaSeriesDbCard extends HTMLElement {
   _renderDetail() {
     const wrap = this._el("div");
     const back = this._el("div", "back-link");
-    back.textContent = "‹ Zurück zur Übersicht";
+    back.textContent = this._t("back");
     back.addEventListener("click", () => {
       this._selectedSeriesId = null;
       this._detail = null;
@@ -1148,7 +1327,7 @@ class HaSeriesDbCard extends HTMLElement {
 
     if (!this._detail) {
       const loading = this._el("div", "loading");
-      loading.textContent = "Lade Serie …";
+      loading.textContent = this._t("loading_series");
       wrap.appendChild(loading);
       return wrap;
     }
@@ -1177,7 +1356,7 @@ class HaSeriesDbCard extends HTMLElement {
       !d.archived;
     if (eligibleForArchive) {
       const hint = this._el("div", "archive-hint");
-      hint.textContent = "Komplett gesehen und abgeschlossen – jetzt archivieren?";
+      hint.textContent = this._t("archive_hint");
       meta.appendChild(hint);
     }
 
@@ -1189,13 +1368,13 @@ class HaSeriesDbCard extends HTMLElement {
 
     const archiveBtn = document.createElement("button");
     archiveBtn.className = "pill";
-    archiveBtn.textContent = d.archived ? "Aus Archiv zurückholen" : "Archivieren";
+    archiveBtn.textContent = d.archived ? this._t("unarchive") : this._t("archive");
     archiveBtn.addEventListener("click", () => this._setArchived(d.series_id, !d.archived));
     btnRow.appendChild(archiveBtn);
 
     const removeBtn = document.createElement("button");
     removeBtn.className = "pill danger";
-    removeBtn.textContent = "Aus Watchlist entfernen";
+    removeBtn.textContent = this._t("remove");
     removeBtn.addEventListener("click", () => this._removeSeries(d.series_id));
     btnRow.appendChild(removeBtn);
 
@@ -1217,7 +1396,9 @@ class HaSeriesDbCard extends HTMLElement {
       const sHeader = this._el("div", "season-header");
       const name = this._el("div", "name");
       name.textContent =
-        (seasonNumber === 0 ? "Specials" : `Staffel ${seasonNumber}`) + (collapsed ? " ›" : " ⌄");
+        (seasonNumber === 0
+          ? this._t("season_specials")
+          : this._t("season_n", { n: seasonNumber })) + (collapsed ? " ›" : " ⌄");
       sHeader.appendChild(name);
 
       const right = this._el("div");
@@ -1230,7 +1411,7 @@ class HaSeriesDbCard extends HTMLElement {
 
       const seasonBtn = document.createElement("button");
       seasonBtn.className = "pill";
-      seasonBtn.textContent = allWatched ? "Alle zurücksetzen" : "Alle gesehen";
+      seasonBtn.textContent = allWatched ? this._t("season_reset") : this._t("season_all");
       seasonBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         const markWatched = !allWatched;
@@ -1293,7 +1474,7 @@ class HaSeriesDbCard extends HTMLElement {
 
     const backBottom = this._el("div", "back-link");
     backBottom.style.marginTop = "16px";
-    backBottom.textContent = "‹ Zurück zur Übersicht";
+    backBottom.textContent = this._t("back");
     backBottom.addEventListener("click", () => {
       this._selectedSeriesId = null;
       this._detail = null;
@@ -1307,12 +1488,12 @@ class HaSeriesDbCard extends HTMLElement {
   _renderWatchProviders(providers) {
     const wrap = this._el("div");
     const title = this._el("div", "section-title");
-    title.textContent = "Verfügbar auf";
+    title.textContent = this._t("available_on_title");
     wrap.appendChild(title);
 
     if (!providers) {
       const loading = this._el("div", "loading");
-      loading.textContent = "Lade Verfügbarkeit …";
+      loading.textContent = this._t("loading_availability");
       wrap.appendChild(loading);
       return wrap;
     }
@@ -1326,7 +1507,7 @@ class HaSeriesDbCard extends HTMLElement {
 
       const group = this._el("div", "provider-group");
       const label = this._el("div", "label");
-      label.textContent = PROVIDER_CATEGORY_LABELS[category] || category;
+      label.textContent = this._t("cat_" + category);
       group.appendChild(label);
 
       const row = this._el("div", "provider-row");
@@ -1345,15 +1526,14 @@ class HaSeriesDbCard extends HTMLElement {
     if (!hasAny) {
       const empty = this._el("div", "empty");
       empty.textContent = this._settings.region
-        ? `Aktuell keine bekannte Streaming-Verfügbarkeit in ${this._settings.region}.`
-        : "Aktuell keine bekannte Streaming-Verfügbarkeit.";
+        ? this._t("no_availability_region", { region: this._settings.region })
+        : this._t("no_availability");
       wrap.appendChild(empty);
     }
 
     if (myIds.size === 0) {
       const hint = this._el("div", "hint");
-      hint.textContent =
-        "Tipp: Trage deine Streamingdienste unter Einstellungen → Geräte & Dienste → HA SeriesDB → Konfigurieren ein, damit sie hier hervorgehoben werden.";
+      hint.textContent = this._t("hint_providers");
       wrap.appendChild(hint);
     }
 
@@ -1367,11 +1547,11 @@ class HaSeriesDbCard extends HTMLElement {
       link.href = providers.link;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
-      link.textContent = "Alle Optionen auf TMDB ansehen";
+      link.textContent = this._t("all_options_link");
       attribution.appendChild(link);
-      attribution.append(" · Daten von JustWatch, bereitgestellt über TMDB.");
+      attribution.append(this._t("attribution_suffix"));
     } else {
-      attribution.textContent = "Verfügbarkeitsdaten von JustWatch, bereitgestellt über TMDB.";
+      attribution.textContent = this._t("attribution_only");
     }
     wrap.appendChild(attribution);
 
@@ -1428,10 +1608,20 @@ class HaSeriesDbCardEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    loadExtraTable(detectLang(hass), () => this._updateText());
+    this._updateText();
+  }
+
+  _updateText() {
+    const p = this.shadowRoot && this.shadowRoot.querySelector("p");
+    if (p) p.textContent = translate(detectLang(this._hass), "editor_text");
   }
 
   _render() {
-    if (this.shadowRoot) return;
+    if (this.shadowRoot) {
+      this._updateText();
+      return;
+    }
     const root = this.attachShadow({ mode: "open" });
     root.innerHTML = `
       <style>
@@ -1443,8 +1633,9 @@ class HaSeriesDbCardEditor extends HTMLElement {
           margin: 0;
         }
       </style>
-      <p>Diese Karte hat keine Konfigurationsoptionen. Breite und Höhe lassen sich über den Reiter „Layout" einstellen.</p>
+      <p></p>
     `;
+    this._updateText();
   }
 }
 if (!customElements.get("ha-seriesdb-card-editor")) {
@@ -1466,7 +1657,7 @@ if (!window.customCards.some((c) => c.type === "ha-seriesdb-card")) {
   window.customCards.push({
     type: "ha-seriesdb-card",
     name: "HA SeriesDB",
-    description: "Serien-Watchlist mit themoviedb.org als Datenquelle – Episoden abhaken.",
+    description: translate(detectLang(null), "card_description"),
     preview: false,
   });
 }

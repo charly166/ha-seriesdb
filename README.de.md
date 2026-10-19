@@ -54,6 +54,9 @@ Architektur, aber für Filme statt Serien.
   anpassbar, füllt dabei exakt die zugewiesene Rasterzelle aus
 - Eigenes Icon/Logo in "Einstellungen → Geräte & Dienste" (Home Assistant
   2026.3+)
+- Kartenoberfläche auf **Deutsch und Englisch**, abhängig von der Sprache des
+  angemeldeten Home-Assistant-Benutzers (andere Sprachen fallen auf Englisch
+  zurück)
 - Eine Sensor-Entität pro verfolgter Serie (Sehfortschritt, nächste
   ungesehene Episode und `available_on`-Liste der eigenen Anbieter, die die
   Serie gerade im Abo haben) für Automationen, z.B. "benachrichtige mich,
@@ -181,7 +184,7 @@ Schreibzugriff auf die Ressourcenliste. In dem Fall in der
 `ui-lovelace.yaml` manuell ergänzen:
 ```yaml
 resources:
-  - url: /ha_seriesdb/ha-seriesdb-card.js?v=16
+  - url: /ha_seriesdb/ha-seriesdb-card.js?v=17
     type: module
 ```
 In dem Fall musst du diese Nummer nach jedem künftigen Update selbst
@@ -311,6 +314,14 @@ automation:
 - Episoden werden pro Staffel einzeln abgerufen
   (`/tv/{id}/season/{n}`), da TMDB Episodenlisten nicht als eine
   Gesamtabfrage über die ganze Serie anbietet.
+- **Sprachen:** Die Kartenoberfläche gibt es auf Deutsch und Englisch; sie
+  folgt der Sprache des angemeldeten Home-Assistant-Benutzers (alle anderen
+  Sprachen fallen auf Englisch zurück). Weitere Sprachen lassen sich ohne
+  Codeänderung ergänzen: eine Datei `<sprache>.json` (z.B. `fr.json`) unter
+  `custom_components/ha_seriesdb/www/translations/` ablegen, mit den Schlüsseln
+  aus dem `en`-Block am Anfang von `ha-seriesdb-card.js` – fehlende Schlüssel fallen auf
+  Englisch zurück. Pull Requests mit neuen Sprachen sind willkommen. Titel und
+  Beschreibungen selbst liefert TMDB auf Deutsch (siehe unten).
 - Texte/Beschreibungen werden standardmäßig auf Deutsch angefragt
   (`language=de-DE`). Ist für eine Serie keine deutsche Beschreibung
   hinterlegt, liefert TMDB ggf. ein leeres Feld statt eines Fallbacks.

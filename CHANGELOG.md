@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.1
+
+- Added a reauthentication flow: if themoviedb.org rejects the stored API key,
+  Home Assistant now offers a working dialog to enter a new key instead of
+  requiring the integration to be removed and re-added.
+
 ## 2.4.0
 
 - Titles, descriptions, posters and episode names are now requested from

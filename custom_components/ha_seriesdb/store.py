@@ -45,6 +45,18 @@ class TMDBStore:
     def is_tracked(self, series_id: str) -> bool:
         return str(series_id) in self._data["series"]
 
+    def get_ids_needing_meta_refresh(self, language: str) -> list[str]:
+        """IDs aller Serien, deren Titel/Beschreibung in einer anderen Sprache gespeichert sind.
+
+        Fehlt die Angabe (Daten aus älteren Versionen), wurde auf Deutsch
+        gespeichert - das war bis dahin die fest eingestellte Sprache.
+        """
+        return [
+            series_id
+            for series_id, series in self._data["series"].items()
+            if (series.get("meta_language") or "de-DE") != language
+        ]
+
     # -- Serien verwalten ----------------------------------------------
 
     async def async_add_series(self, series_id: str, info: dict[str, Any]) -> None:
@@ -57,6 +69,7 @@ class TMDBStore:
             "image": info.get("image", existing.get("image", "")),
             "status": info.get("status", existing.get("status", "")),
             "network": info.get("network", existing.get("network", "")),
+            "meta_language": info.get("language", existing.get("meta_language")),
             "added_at": existing.get("added_at", _now()),
             "episodes": existing.get("episodes", {}),
             "watched": existing.get("watched", {}),

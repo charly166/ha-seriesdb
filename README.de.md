@@ -321,9 +321,15 @@ automation:
   `custom_components/ha_seriesdb/www/translations/` ablegen, mit den Schlüsseln
   aus dem `en`-Block am Anfang von `ha-seriesdb-card.js` – fehlende Schlüssel fallen auf
   Englisch zurück. Pull Requests mit neuen Sprachen sind willkommen. Titel und
-  Beschreibungen selbst liefert TMDB auf Deutsch (siehe unten).
-- Texte/Beschreibungen werden standardmäßig auf Deutsch angefragt
-  (`language=de-DE`). Ist für eine Serie keine deutsche Beschreibung
+  Beschreibungen werden von TMDB in der Home-Assistant-Sprache abgefragt (siehe
+  unten).
+- Titel, Beschreibungen, Poster und Episodennamen werden von TMDB in der in
+  Home Assistant eingestellten Sprache abgefragt (z.B. `de` -> `de-DE`,
+  `en` -> `en-US`; Fallback ist Deutsch). Das ist eine Einstellung für die
+  ganze Instanz – im Gegensatz zur Kartenoberfläche, die der Sprache des
+  jeweiligen Benutzers folgt. Ändert man die Home-Assistant-Sprache, werden
+  bereits verfolgte Serien nach dem nächsten Neustart/Neuladen einmalig in
+  der neuen Sprache nachgeladen. Ist für eine Serie keine Übersetzung
   hinterlegt, liefert TMDB ggf. ein leeres Feld statt eines Fallbacks.
 - `iot_class: cloud_polling` – die Integration ruft aktiv themoviedb.org ab,
   standardmäßig alle 12 Stunden für bereits verfolgte Serien, sowie bei jeder

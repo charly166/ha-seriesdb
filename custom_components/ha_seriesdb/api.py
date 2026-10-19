@@ -56,6 +56,23 @@ def _map_provider(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# Home-Assistant-Sprache -> TMDB-Sprachcode (TMDB erwartet z.B. "de-DE").
+_TMDB_LANGUAGE_MAP = {
+    "de": "de-DE",
+    "en": "en-US",
+    "zh-Hans": "zh-CN",
+    "zh-Hant": "zh-TW",
+    "nb": "no",
+}
+
+
+def tmdb_language(ha_language: str | None) -> str:
+    """Leitet die TMDB-Sprache aus der Home-Assistant-Sprache ab (Fallback: Deutsch)."""
+    if not ha_language:
+        return TMDB_LANGUAGE
+    return _TMDB_LANGUAGE_MAP.get(ha_language, ha_language)
+
+
 class TMDBClient:
     """Kapselt die wenigen TMDB-Endpunkte, die diese Integration braucht.
 
@@ -64,12 +81,20 @@ class TMDBClient:
     wird – es ist also kein separater Login-Schritt nötig.
     """
 
-    def __init__(self, session: ClientSession, api_key: str) -> None:
+    def __init__(
+        self, session: ClientSession, api_key: str, language: str = TMDB_LANGUAGE
+    ) -> None:
         self._session = session
         self._api_key = api_key
+        self._language = language
+
+    @property
+    def language(self) -> str:
+        """TMDB-Sprache, in der Titel, Beschreibungen usw. abgefragt werden."""
+        return self._language
 
     async def _request(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        query = {"api_key": self._api_key, "language": TMDB_LANGUAGE}
+        query = {"api_key": self._api_key, "language": self._language}
         if params:
             query.update(params)
 
@@ -143,6 +168,7 @@ class TMDBClient:
             "network": networks[0]["name"] if networks else "",
             "year": year,
             "_seasons": seasons,
+            "language": self._language,
         }
 
     async def async_get_episodes(self, series_id: str) -> list[dict[str, Any]]:

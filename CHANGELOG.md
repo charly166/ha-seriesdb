@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.0
+
+- Titles, descriptions, posters and episode names are now requested from
+  TMDB in the Home Assistant language (`hass.config.language`) instead of
+  always German. If the language differs from what was stored, tracked shows
+  are re-fetched once in the new language (on the next restart/reload).
+  German instances behave exactly as before.
+
 ## 2.3.0
 
 - The card UI is now available in **English and German** and follows the

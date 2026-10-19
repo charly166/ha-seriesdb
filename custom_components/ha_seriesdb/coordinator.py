@@ -33,6 +33,19 @@ class TMDBCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_update_data(self) -> dict[str, Any]:
         summary: dict[str, Any] = {}
+
+        # Wechselt die Home-Assistant-Sprache, werden Titel/Beschreibungen/Poster
+        # einmalig in der neuen Sprache nachgeladen (auch für archivierte Serien).
+        # Episodennamen kommen ohnehin mit dem normalen Episoden-Refresh unten.
+        for series_id in self.store.get_ids_needing_meta_refresh(self.client.language):
+            try:
+                info = await self.client.async_get_series(series_id)
+                await self.store.async_add_series(series_id, info)
+            except TMDBError as err:
+                _LOGGER.warning(
+                    "Konnte Seriendaten für %s nicht in der neuen Sprache laden: %s", series_id, err
+                )
+
         for series_id in list(self.store.get_all_series().keys()):
             try:
                 episodes = await self.client.async_get_episodes(series_id)

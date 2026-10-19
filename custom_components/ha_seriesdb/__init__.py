@@ -12,7 +12,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
-from .api import TMDBAuthError, TMDBClient, TMDBError
+from .api import TMDBAuthError, TMDBClient, TMDBError, tmdb_language
 from .const import (
     ATTR_ARCHIVED,
     ATTR_EPISODE_ID,
@@ -52,7 +52,9 @@ CARD_URL_PATH = f"{STATIC_BASE_PATH}/{CARD_FILENAME}?v={CARD_VERSION}"
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     session = async_get_clientsession(hass)
-    client = TMDBClient(session, entry.data[CONF_API_KEY])
+    client = TMDBClient(
+        session, entry.data[CONF_API_KEY], tmdb_language(hass.config.language)
+    )
 
     try:
         await client.async_test_connection()

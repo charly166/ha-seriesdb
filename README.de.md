@@ -81,15 +81,20 @@ Weiterverbreitung nicht gestattet:
 1. Auf https://www.themoviedb.org/about/logos-attribution eines der
    freigegebenen Logos herunterladen (SVG oder PNG, z.B. die kurze
    quadratische Variante).
-2. Die Datei unverändert (Farbe/Seitenverhältnis nicht anpassen) als
-   `tmdb-logo.svg` (bzw. `.png`, dann den Dateinamen in
-   `custom_components/ha_seriesdb/www/ha-seriesdb-card.js` in der Methode
-   `_renderTmdbAttribution()` einmal anpassen) hier ablegen:
+2. Speichere es unverändert (Farbe/Seitenverhältnis nicht anpassen) als
+   `tmdb-logo.svg` (oder `tmdb-logo.png`) im `www`-Ordner deiner Home-
+   Assistant-Konfiguration, in einem Unterordner `ha_seriesdb` (bei Bedarf
+   anlegen; falls `www` bisher nicht existierte, Home Assistant einmal neu
+   starten):
    ```
-   custom_components/ha_seriesdb/www/tmdb-logo.svg
+   <config>/www/ha_seriesdb/tmdb-logo.svg
    ```
-3. Fertig – solange die Datei fehlt, blendet die Karte den Logo-Platzhalter
-   automatisch aus, zeigt aber weiterhin den Pflicht-Text an.
+   Dieser Ort liegt außerhalb von `custom_components` und übersteht daher
+   HACS-Updates. (Ältere Installationen, die die Datei in
+   `custom_components/ha_seriesdb/www/` abgelegt haben, funktionieren weiter,
+   HACS entfernt diese Kopie aber bei jedem Update – bitte verschieben.)
+3. Browser neu laden – solange die Datei fehlt, blendet die Karte einfach
+   den Logo-Platzhalter aus und zeigt weiterhin den Pflichttext.
 
 Die Watch-Provider-Daten (Streaming-Verfügbarkeit) stammen von **JustWatch**
 und werden über die `/watch/providers`-API von TMDB bereitgestellt – dafür
@@ -184,7 +189,7 @@ Schreibzugriff auf die Ressourcenliste. In dem Fall in der
 `ui-lovelace.yaml` manuell ergänzen:
 ```yaml
 resources:
-  - url: /ha_seriesdb/ha-seriesdb-card.js?v=17
+  - url: /ha_seriesdb/ha-seriesdb-card.js?v=18
     type: module
 ```
 In dem Fall musst du diese Nummer nach jedem künftigen Update selbst
@@ -437,7 +442,6 @@ ha-seriesdb/
     └── www/
         ├── ha-seriesdb-card.js    Lovelace-Karte (GUI)
         ├── ha-seriesdb-icon.png   App-Icon für die Kartenkopfzeile
-        └── tmdb-logo.svg          ⚠️ selbst von TMDB herunterladen, siehe oben
 ```
 
 ## Mindestanforderungen

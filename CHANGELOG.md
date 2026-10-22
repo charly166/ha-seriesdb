@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.2
+
+- The card now loads the TMDB logo from `<config>/www/ha_seriesdb/tmdb-logo.svg`
+  (or `.png`), served as `/local/ha_seriesdb/...`. This location is outside
+  `custom_components`, so the file survives HACS updates (HACS replaces the
+  integration folder on every update). The old location inside
+  `custom_components/ha_seriesdb/www/` still works as a fallback.
+
 ## 2.4.1
 
 - Added a reauthentication flow: if themoviedb.org rejects the stored API key,

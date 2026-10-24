@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.5.0
+
+- Added a search field above the show lists (My shows, Open, Archive) to
+  filter by title. The filter is shared between the lists and ignores case.
+  Requested in the HA MoviesDB issue tracker (charly166/ha-moviesdb#2).
+
 ## 2.4.2
 
 - The card now loads the TMDB logo from `<config>/www/ha_seriesdb/tmdb-logo.svg`

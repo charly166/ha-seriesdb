@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.1
+
+- The list filter field is now only shown when a list has more than 20 shows
+  (or while a filter text is active), so short lists stay uncluttered.
+
 ## 2.5.0
 
 - Added a search field above the show lists (My shows, Open, Archive) to

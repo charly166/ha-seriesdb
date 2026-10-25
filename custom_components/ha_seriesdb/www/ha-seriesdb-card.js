@@ -198,6 +198,8 @@ function translate(lang, key, vars) {
 }
 
 const TAB_IDS = ["mine", "open", "archive", "search"];
+// Filterfeld erst ab dieser Listengröße anzeigen
+const LIST_FILTER_MIN_ITEMS = 20;
 const ACTIVE_TAB_STORAGE_KEY = `${DOMAIN}_active_tab`;
 
 const PROVIDER_CATEGORY_ORDER = ["flatrate", "free", "ads", "rent", "buy"];
@@ -1190,18 +1192,21 @@ class HaSeriesDbCard extends HTMLElement {
     }
 
     // Filter über alle Listen hinweg geteilt (Titel, ohne Groß-/Kleinschreibung)
-    const row = this._el("div", "search-row");
-    const input = document.createElement("input");
-    input.type = "text";
-    input.placeholder = this._t("filter_placeholder");
-    input.value = this._listFilter;
-    input.dataset.focusId = "list-filter";
-    input.addEventListener("input", (e) => {
-      this._listFilter = e.target.value;
-      this._render();
-    });
-    row.appendChild(input);
-    wrap.appendChild(row);
+    // Nur bei langen Listen (oder aktivem Filter, damit er sichtbar bleibt)
+    if (list.length > LIST_FILTER_MIN_ITEMS || this._listFilter) {
+      const row = this._el("div", "search-row");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = this._t("filter_placeholder");
+      input.value = this._listFilter;
+      input.dataset.focusId = "list-filter";
+      input.addEventListener("input", (e) => {
+        this._listFilter = e.target.value;
+        this._render();
+      });
+      row.appendChild(input);
+      wrap.appendChild(row);
+    }
 
     const needle = this._listFilter.trim().toLowerCase();
     if (needle) {

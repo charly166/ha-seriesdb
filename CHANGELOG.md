@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.2
+
+- Bumped the card resource version so browsers reload the updated card instead
+  of serving the cached one.
+
 ## 2.5.1
 
 - The list filter field is now only shown when a list has more than 20 shows

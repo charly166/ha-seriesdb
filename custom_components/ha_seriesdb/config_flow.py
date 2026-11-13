@@ -20,7 +20,15 @@ from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import TMDBAuthError, TMDBClient, TMDBError
-from .const import CONF_API_KEY, CONF_PROVIDER_IDS, CONF_REGION, DEFAULT_REGION, DOMAIN
+from .const import (
+    CONF_API_KEY,
+    CONF_PERSON_IDS,
+    CONF_PROVIDER_IDS,
+    CONF_REGION,
+    DEFAULT_REGION,
+    DOMAIN,
+    MAX_PERSONS,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,7 +63,7 @@ class TMDBConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.async_create_entry(
                     title="HA SeriesDB",
                     data=user_input,
-                    options={CONF_REGION: DEFAULT_REGION, CONF_PROVIDER_IDS: []},
+                    options={CONF_REGION: DEFAULT_REGION, CONF_PROVIDER_IDS: [], CONF_PERSON_IDS: []},
                 )
 
         return self.async_show_form(
@@ -120,10 +128,15 @@ class TMDBOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             data = dict(user_input)
             data[CONF_PROVIDER_IDS] = [int(p) for p in data.get(CONF_PROVIDER_IDS, [])]
-            return self.async_create_entry(title="", data=data)
+            data.setdefault(CONF_PERSON_IDS, [])
+            if len(data[CONF_PERSON_IDS]) > MAX_PERSONS:
+                errors["base"] = "too_many_persons"
+            else:
+                return self.async_create_entry(title="", data=data)
 
         current_region = self.config_entry.options.get(CONF_REGION, DEFAULT_REGION)
         current_provider_ids = self.config_entry.options.get(CONF_PROVIDER_IDS, [])
+        current_person_ids = self.config_entry.options.get(CONF_PERSON_IDS, [])
 
         session = async_get_clientsession(self.hass)
         client = TMDBClient(session, self.config_entry.data[CONF_API_KEY])
@@ -170,6 +183,11 @@ class TMDBOptionsFlow(config_entries.OptionsFlow):
                         multiple=True,
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
+                ),
+                vol.Optional(
+                    CONF_PERSON_IDS, default=current_person_ids
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="person", multiple=True)
                 ),
             }
         )

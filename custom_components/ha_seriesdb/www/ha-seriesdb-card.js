@@ -22,6 +22,18 @@
 
 const DOMAIN = "ha_seriesdb";
 
+// Spaltenzahl der Listen: "auto" richtet sich nach poster_size, 1 ist eine
+// Listenansicht mit Beschreibung. Die Wahl am Gerät wird im Browser gemerkt.
+const COLUMN_CHOICES = ["auto", "1", "2", "3"];
+const COLUMNS_STORAGE_KEY = `${DOMAIN}_columns`;
+
+// Kachelgröße der Poster in den Listen (Kartenoption `poster_size`).
+const POSTER_SIZES = {
+  small: { min: 120, height: 168 },
+  medium: { min: 160, height: 224 },
+  large: { min: 200, height: 280 },
+};
+
 // --- Mehrsprachigkeit -------------------------------------------------------
 // Die Kartensprache folgt der Sprache des angemeldeten Home-Assistant-Benutzers
 // (hass.locale.language). Deutsch und Englisch sind fest eingebaut. Für weitere
@@ -47,6 +59,15 @@ const TRANSLATIONS = {
     search_placeholder: "Serientitel eingeben …",
     filter_placeholder: "Liste durchsuchen …",
     no_filter_results: "Keine Serien in dieser Liste gefunden.",
+    persons_for: "Vorgemerkt für",
+    err_persons: "Die Personen konnten nicht gespeichert werden.",
+    poster_size_label: "Postergröße",
+    poster_size_small: "Klein",
+    poster_size_medium: "Mittel",
+    poster_size_large: "Groß",
+    poster_enlarge: "Poster vergrößern",
+    columns_label: "Spalten",
+    columns_auto: "Auto",
     data_source: "Datenquelle: themoviedb.org (kostenlose API)",
     searching: "Suche läuft …",
     no_results: "Keine Treffer.",
@@ -89,7 +110,7 @@ const TRANSLATIONS = {
     err_not_configured: "Die Integration ist nicht eingerichtet.",
     err_not_found: "Die Serie wird nicht verfolgt.",
     err_tmdb: "Fehler bei der Kommunikation mit themoviedb.org. Details stehen im Home-Assistant-Log.",
-    editor_text: "Diese Karte hat keine Konfigurationsoptionen. Breite und Höhe lassen sich über den Reiter „Layout“ einstellen. Region und eigene Streamingdienste werden unter Einstellungen → Geräte & Dienste → HA SeriesDB → Konfigurieren eingestellt.",
+    editor_text: "Breite und Höhe lassen sich über den Reiter „Layout“ einstellen. Region und eigene Streamingdienste werden unter Einstellungen → Geräte & Dienste → HA SeriesDB → Konfigurieren eingestellt.",
     card_description: "Serien-Watchlist mit themoviedb.org als Datenquelle – Episoden abhaken.",
   },
   en: {
@@ -111,6 +132,15 @@ const TRANSLATIONS = {
     search_placeholder: "Enter show title …",
     filter_placeholder: "Search this list …",
     no_filter_results: "No shows found in this list.",
+    persons_for: "Tagged for",
+    err_persons: "Could not save the people.",
+    poster_size_label: "Poster size",
+    poster_size_small: "Small",
+    poster_size_medium: "Medium",
+    poster_size_large: "Large",
+    poster_enlarge: "Enlarge poster",
+    columns_label: "Columns",
+    columns_auto: "Auto",
     data_source: "Data source: themoviedb.org (free API)",
     searching: "Searching …",
     no_results: "No results.",
@@ -153,7 +183,7 @@ const TRANSLATIONS = {
     err_not_configured: "The integration is not set up.",
     err_not_found: "This show is not on your watchlist.",
     err_tmdb: "Error communicating with themoviedb.org. See the Home Assistant log for details.",
-    editor_text: "This card has no configuration options. Width and height can be set on the “Layout” tab. Region and your own streaming services are set under Settings → Devices & Services → HA SeriesDB → Configure.",
+    editor_text: "Width and height can be set on the “Layout” tab. Region and your own streaming services are set under Settings → Devices & Services → HA SeriesDB → Configure.",
     card_description: "TV show watchlist using themoviedb.org as data source – check off episodes.",
   },
 };
@@ -450,7 +480,7 @@ const STYLES = `
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(var(--poster-min, 120px), 1fr));
     gap: 14px;
     padding-right: 4px;
   }
@@ -464,7 +494,96 @@ const STYLES = `
 
   .series-card .poster {
     width: 100%;
-    height: 168px;
+    height: var(--poster-height, 168px);
+    border-radius: 8px;
+  }
+
+  .poster-wrap { position: relative; }
+  .series-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+  /* Personen: grau = nicht gewählt, farbig = gewählt */
+  .persons { display: flex; gap: 4px; }
+  .poster-wrap .persons { position: absolute; top: 6px; left: 6px; }
+  .persons-filter { align-items: center; gap: 8px; }
+  .persons-label { font-size: 12px; color: var(--tmdb-text-muted); }
+  .person {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    box-sizing: border-box;
+    border: 2px solid #fff;
+    background: var(--tmdb-surface-alt);
+    color: var(--tmdb-text);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 0;
+    cursor: pointer;
+    filter: grayscale(1);
+    opacity: 0.75;
+  }
+  .person img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .person.on { filter: none; opacity: 1; border-color: var(--tmdb-accent); }
+  .persons-filter .person, .detail-persons .person { width: 34px; height: 34px; }
+  .detail-persons { margin-top: 10px; align-items: center; gap: 8px; }
+
+  .list-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .columns-switch { display: flex; gap: 4px; margin-left: auto; }
+  .columns-switch button {
+    background: var(--tmdb-surface-alt);
+    color: var(--tmdb-text-muted);
+    border: 1px solid var(--tmdb-border);
+    border-radius: 6px;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .columns-switch button:hover { border-color: var(--tmdb-accent); }
+  .columns-switch button.active { background: var(--tmdb-accent); color: var(--tmdb-bg); border-color: var(--tmdb-accent); }
+
+  /* feste Spaltenzahl: Poster im Seitenverhältnis 2:3 statt fester Höhe */
+  .grid.fixed .series-card .poster { height: auto; aspect-ratio: 2 / 3; }
+  /* 1 Spalte: Listenansicht, Poster links, Text rechts */
+  .grid.single .series-card { flex-direction: row; gap: 12px; }
+  .grid.single .poster-wrap { width: 110px; flex-shrink: 0; }
+  .grid.single .poster { cursor: zoom-in; }
+  .series-overview {
+    font-size: 12px;
+    color: var(--tmdb-text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .poster-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    cursor: zoom-out;
+  }
+  .poster-overlay img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
     border-radius: 8px;
   }
 
@@ -525,7 +644,7 @@ const STYLES = `
     gap: 14px;
     margin-bottom: 14px;
   }
-  .detail-header .poster { width: 70px; height: 100px; }
+  .detail-header .poster { width: 120px; height: 180px; border-radius: 8px; cursor: zoom-in; }
   .detail-header .meta { flex: 1; min-width: 0; }
   .detail-header h2 {
     font-family: ${HEADLINE_FONT};
@@ -658,7 +777,10 @@ class HaSeriesDbCard extends HTMLElement {
     this._listFilter = "";
     this._selectedSeriesId = null;
     this._detail = null;
-    this._settings = { region: "", providers: [] };
+    this._settings = { region: "", providers: [], persons: [] };
+    this._personFilter = null;
+    this._posterOverlay = false;
+    this._columns = null;
     this._collapsedSeasons = new Set();
     this._scrollToEpisodeId = null;
     this._error = null;
@@ -1070,6 +1192,15 @@ class HaSeriesDbCard extends HTMLElement {
     }
     card.appendChild(body);
     card.appendChild(this._renderTmdbAttribution());
+    if (this._posterOverlay) {
+      const overlay = this._el("div", "poster-overlay");
+      const big = document.createElement("img");
+      // TMDB liefert das Bild auch in höherer Auflösung
+      big.src = this._posterOverlay.replace("/w342/", "/w780/");
+      overlay.appendChild(big);
+      overlay.addEventListener("click", () => this._setPosterOverlay(false));
+      card.appendChild(overlay);
+    }
 
     if (this._successMessage) {
       const toast = this._el("div", "toast");
@@ -1182,6 +1313,108 @@ class HaSeriesDbCard extends HTMLElement {
     );
   }
 
+  // Personen werden nur angezeigt, wenn im Options-Dialog mehr als eine gewählt ist.
+  _persons() {
+    const list = (this._settings && this._settings.persons) || [];
+    return list.length > 1 ? list : [];
+  }
+
+  async _togglePerson(seriesId, entityId) {
+    const series = this._tracked.find((x) => x.series_id === seriesId);
+    const current =
+      (series && series.persons) ||
+      (this._detail && this._detail.series_id === seriesId ? this._detail.persons : []) ||
+      [];
+    const next = current.includes(entityId)
+      ? current.filter((p) => p !== entityId)
+      : [...current, entityId];
+    try {
+      const res = await this._hass.callWS({ type: `${DOMAIN}/set_persons`, series_id: seriesId, persons: next });
+      if (series) series.persons = res.persons;
+      if (this._detail && this._detail.series_id === seriesId) this._detail.persons = res.persons;
+      this._error = null;
+    } catch (err) {
+      this._error = this._errText(err, "err_persons");
+    }
+    this._render();
+  }
+
+  _renderPersonAvatars(selected, onToggle, extraClass = "") {
+    const row = this._el("div", `persons ${extraClass}`.trim());
+    for (const p of this._persons()) {
+      const btn = this._el("div", "person" + (selected.includes(p.entity_id) ? " on" : ""));
+      btn.title = p.name;
+      if (p.picture) {
+        const img = document.createElement("img");
+        img.src = p.picture;
+        img.alt = p.name;
+        btn.appendChild(img);
+      } else {
+        btn.textContent = (p.name || "?").trim().charAt(0).toUpperCase();
+      }
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        onToggle(p.entity_id);
+      });
+      row.appendChild(btn);
+    }
+    return row;
+  }
+
+  // Spaltenwahl: Auswahl am Gerät (localStorage) vor der Kartenoption `columns`.
+  _getColumns() {
+    if (this._columns === null) {
+      let stored = null;
+      try {
+        stored = window.localStorage.getItem(COLUMNS_STORAGE_KEY);
+      } catch {
+        // localStorage nicht verfügbar - egal
+      }
+      const configured = this._config.columns === undefined ? "auto" : String(this._config.columns);
+      this._columns = COLUMN_CHOICES.includes(stored) ? stored : COLUMN_CHOICES.includes(configured) ? configured : "auto";
+    }
+    return this._columns;
+  }
+
+  _setColumns(value) {
+    this._columns = value;
+    try {
+      window.localStorage.setItem(COLUMNS_STORAGE_KEY, value);
+    } catch {
+      // nicht schlimm, die Wahl gilt dann nur bis zum Neuladen
+    }
+    this._render();
+  }
+
+  _renderColumnsSwitch() {
+    const box = this._el("div", "columns-switch");
+    box.title = this._t("columns_label");
+    for (const choice of COLUMN_CHOICES) {
+      const btn = document.createElement("button");
+      btn.textContent = choice === "auto" ? this._t("columns_auto") : choice;
+      btn.title = `${this._t("columns_label")}: ${btn.textContent}`;
+      if (this._getColumns() === choice) btn.className = "active";
+      btn.addEventListener("click", () => this._setColumns(choice));
+      box.appendChild(btn);
+    }
+    return box;
+  }
+
+  // `image`: URL des Posters, das vergrößert werden soll - false schließt das Overlay.
+  _setPosterOverlay(image) {
+    this._posterOverlay = image;
+    if (image) {
+      this._onKeydown = (e) => {
+        if (e.key === "Escape") this._setPosterOverlay(false);
+      };
+      document.addEventListener("keydown", this._onKeydown);
+    } else if (this._onKeydown) {
+      document.removeEventListener("keydown", this._onKeydown);
+      this._onKeydown = null;
+    }
+    this._render();
+  }
+
   _renderSeriesGrid(list, emptyText) {
     const wrap = this._el("div");
     if (!list.length) {
@@ -1208,9 +1441,28 @@ class HaSeriesDbCard extends HTMLElement {
       wrap.appendChild(row);
     }
 
+    const toolbar = this._el("div", "list-toolbar");
+    if (this._persons().length) {
+      toolbar.appendChild(
+        this._renderPersonAvatars(
+          this._personFilter ? [this._personFilter] : [],
+          (id) => {
+            this._personFilter = this._personFilter === id ? null : id;
+            this._render();
+          },
+          "persons-filter"
+        )
+      );
+    }
+    toolbar.appendChild(this._renderColumnsSwitch());
+    wrap.appendChild(toolbar);
+
     const needle = this._listFilter.trim().toLowerCase();
     if (needle) {
       list = list.filter((s) => (s.name || "").toLowerCase().includes(needle));
+    }
+    if (this._personFilter) {
+      list = list.filter((s) => (s.persons || []).includes(this._personFilter));
     }
     if (!list.length) {
       const empty = this._el("div", "empty");
@@ -1219,6 +1471,16 @@ class HaSeriesDbCard extends HTMLElement {
       return wrap;
     }
     const grid = this._el("div", "grid");
+    const columns = this._getColumns();
+    if (columns === "auto") {
+      const size = POSTER_SIZES[this._config.poster_size] || POSTER_SIZES.small;
+      grid.style.setProperty("--poster-min", `${size.min}px`);
+      grid.style.setProperty("--poster-height", `${size.height}px`);
+    } else {
+      grid.classList.add("fixed");
+      if (columns === "1") grid.classList.add("single");
+      grid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+    }
     for (const s of list) {
       const total = s.total_episodes || 0;
       const watched = s.watched_episodes || 0;
@@ -1227,15 +1489,31 @@ class HaSeriesDbCard extends HTMLElement {
       const cardEl = this._el("div", "series-card");
       cardEl.addEventListener("click", () => this._openSeries(s.series_id));
 
+      const posterWrap = this._el("div", "poster-wrap");
       const img = document.createElement("img");
       img.className = "poster";
       img.loading = "lazy";
       if (s.image) img.src = s.image;
-      cardEl.appendChild(img);
+      posterWrap.appendChild(img);
+      if (columns === "1" && s.image) {
+        // Listenansicht: Klick auf das Poster vergrößert es, der Rest der Kachel öffnet die Details
+        img.title = this._t("poster_enlarge");
+        img.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this._setPosterOverlay(s.image);
+        });
+      }
+      if (this._persons().length) {
+        posterWrap.appendChild(
+          this._renderPersonAvatars(s.persons || [], (id) => this._togglePerson(s.series_id, id))
+        );
+      }
+      cardEl.appendChild(posterWrap);
 
+      const info = this._el("div", "series-info");
       const title = this._el("div", "title");
       title.textContent = s.name || s.series_id;
-      cardEl.appendChild(title);
+      info.appendChild(title);
 
       if (s.status) {
         const badge = this._el(
@@ -1243,24 +1521,31 @@ class HaSeriesDbCard extends HTMLElement {
           "status-badge " + (this._isEndedStatus(s.status) ? "ended" : "returning")
         );
         badge.textContent = this._statusLabel(s.status);
-        cardEl.appendChild(badge);
+        info.appendChild(badge);
       }
 
       if (s.available_on && s.available_on.length) {
         const avail = this._el("div", "available-badge");
         avail.textContent = this._t("available", { list: s.available_on.join(", ") });
-        cardEl.appendChild(avail);
+        info.appendChild(avail);
+      }
+
+      if (columns === "1" && s.overview) {
+        const overview = this._el("div", "series-overview");
+        overview.textContent = s.overview;
+        info.appendChild(overview);
       }
 
       const track = this._el("div", "progress-track");
       const fill = this._el("div", "progress-fill");
       fill.style.width = pct + "%";
       track.appendChild(fill);
-      cardEl.appendChild(track);
+      info.appendChild(track);
 
       const label = this._el("div", "progress-label");
       label.textContent = this._t("episodes_progress", { watched, total });
-      cardEl.appendChild(label);
+      info.appendChild(label);
+      cardEl.appendChild(info);
 
       grid.appendChild(cardEl);
     }
@@ -1371,7 +1656,11 @@ class HaSeriesDbCard extends HTMLElement {
     const header = this._el("div", "detail-header");
     const img = document.createElement("img");
     img.className = "poster";
-    if (d.image) img.src = d.image;
+    if (d.image) {
+      img.src = d.image;
+      img.title = this._t("poster_enlarge");
+      img.addEventListener("click", () => this._setPosterOverlay(d.image));
+    }
     header.appendChild(img);
 
     const meta = this._el("div", "meta");
@@ -1414,6 +1703,17 @@ class HaSeriesDbCard extends HTMLElement {
     btnRow.appendChild(removeBtn);
 
     meta.appendChild(btnRow);
+
+    if (this._persons().length) {
+      const personsRow = this._el("div", "persons detail-persons");
+      const label = this._el("span", "persons-label");
+      label.textContent = this._t("persons_for");
+      personsRow.appendChild(label);
+      personsRow.appendChild(
+        this._renderPersonAvatars(d.persons || [], (id) => this._togglePerson(d.series_id, id))
+      );
+      meta.appendChild(personsRow);
+    }
 
     header.appendChild(meta);
     wrap.appendChild(header);
@@ -1644,10 +1944,9 @@ class HaSeriesDbCard extends HTMLElement {
   }
 }
 
-// Minimaler Konfigurations-Editor: Diese Karte hat keine einstellbaren
-// Optionen (nur `type: custom:ha-seriesdb-card`), daher genügt ein kurzer
-// Hinweistext. Wichtig ist vor allem, DASS die Klasse existiert - siehe
-// Kommentar bei getConfigElement() oben.
+// Minimaler Konfigurations-Editor: Optionen sind `columns` und `poster_size`.
+// Wichtig ist vor allem, DASS die Klasse existiert - siehe Kommentar bei
+// getConfigElement() oben.
 class HaSeriesDbCardEditor extends HTMLElement {
   setConfig(config) {
     this._config = config || {};
@@ -1661,8 +1960,24 @@ class HaSeriesDbCardEditor extends HTMLElement {
   }
 
   _updateText() {
-    const p = this.shadowRoot && this.shadowRoot.querySelector("p");
-    if (p) p.textContent = translate(detectLang(this._hass), "editor_text");
+    const root = this.shadowRoot;
+    if (!root) return;
+    const lang = detectLang(this._hass);
+    root.querySelector("p").textContent = translate(lang, "editor_text");
+    for (const label of root.querySelectorAll("label")) {
+      const key = label.dataset.key;
+      label.firstChild.textContent = translate(lang, `${key}_label`) + " ";
+      const select = label.querySelector("select");
+      for (const option of select.options) {
+        option.textContent =
+          key === "columns" && option.value !== "auto"
+            ? option.value
+            : translate(lang, `${key}_${option.value}`);
+      }
+      const choices = key === "columns" ? COLUMN_CHOICES : Object.keys(POSTER_SIZES);
+      const current = this._config[key] === undefined ? "" : String(this._config[key]);
+      select.value = choices.includes(current) ? current : choices[0];
+    }
   }
 
   _render() {
@@ -1673,16 +1988,37 @@ class HaSeriesDbCardEditor extends HTMLElement {
     const root = this.attachShadow({ mode: "open" });
     root.innerHTML = `
       <style>
-        p {
+        p, label {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
           font-size: 14px;
           color: var(--secondary-text-color, #6b7280);
-          padding: 16px 4px;
+          padding: 8px 4px;
           margin: 0;
+          display: block;
         }
+        select { font-size: 14px; margin-left: 6px; }
       </style>
       <p></p>
+      <label data-key="columns">x <select>
+        ${COLUMN_CHOICES.map((c) => `<option value="${c}"></option>`).join("")}
+      </select></label>
+      <label data-key="poster_size">x <select>
+        ${Object.keys(POSTER_SIZES).map((c) => `<option value="${c}"></option>`).join("")}
+      </select></label>
     `;
+    for (const label of root.querySelectorAll("label")) {
+      const key = label.dataset.key;
+      label.querySelector("select").addEventListener("change", (e) => {
+        const config = { ...this._config };
+        const isDefault = e.target.value === (key === "columns" ? "auto" : "small");
+        if (isDefault) delete config[key];
+        else config[key] = key === "columns" ? Number(e.target.value) : e.target.value;
+        this._config = config;
+        this.dispatchEvent(
+          new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true })
+        );
+      });
+    }
     this._updateText();
   }
 }

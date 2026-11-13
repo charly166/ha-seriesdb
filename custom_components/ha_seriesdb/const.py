@@ -5,6 +5,11 @@ DOMAIN = "ha_seriesdb"
 CONF_API_KEY = "api_key"
 CONF_REGION = "region"
 CONF_PROVIDER_IDS = "provider_ids"
+CONF_PERSON_IDS = "person_ids"
+
+# Höchstzahl der Personen, für die eine Serie vorgemerkt werden kann (die Avatare
+# müssen auf ein Poster passen).
+MAX_PERSONS = 4
 
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/"
@@ -39,7 +44,7 @@ STATIC_BASE_PATH = f"/{DOMAIN}"
 # Lovelace-Ressource wird automatisch auf diese Version aktualisiert (siehe
 # frontend.py) - ein manuelles Nachtragen der URL ist dadurch nicht mehr
 # nötig.
-CARD_VERSION = "19"
+CARD_VERSION = "20"
 
 STORAGE_VERSION = 1
 STORAGE_KEY = f"{DOMAIN}_data"
@@ -58,6 +63,7 @@ SERVICE_MARK_SEASON_WATCHED = "mark_season_watched"
 SERVICE_MARK_WATCHED_UP_TO = "mark_watched_up_to"
 SERVICE_REFRESH = "refresh"
 SERVICE_SET_ARCHIVED = "set_archived"
+SERVICE_SET_PERSONS = "set_persons"
 SERVICE_REFRESH_WATCH_PROVIDERS = "refresh_watch_providers"
 
 ATTR_SERIES_ID = "series_id"
@@ -65,3 +71,4 @@ ATTR_EPISODE_ID = "episode_id"
 ATTR_SEASON_NUMBER = "season_number"
 ATTR_WATCHED = "watched"
 ATTR_ARCHIVED = "archived"
+ATTR_PERSONS = "persons"

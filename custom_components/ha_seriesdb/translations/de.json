@@ -29,15 +29,17 @@
     "step": {
       "init": {
         "title": "HA SeriesDB Einstellungen",
-        "description": "Wähle die Region für die Streaming-Verfügbarkeit sowie deine eigenen Streamingdienste aus. Ein Regionswechsel wirkt sich vollständig erst beim nächsten Öffnen dieses Dialogs aus.",
+        "description": "Wähle die Region für die Streaming-Verfügbarkeit, deine eigenen Streamingdienste und bis zu 4 Personen, für die Serien vorgemerkt werden können. Die Personen erscheinen nur dann auf den Postern, wenn mehr als eine ausgewählt ist. Ein Regionswechsel wirkt sich vollständig erst beim nächsten Öffnen dieses Dialogs aus.",
         "data": {
           "region": "Region",
-          "provider_ids": "Meine Streamingdienste"
+          "provider_ids": "Meine Streamingdienste",
+          "person_ids": "Personen"
         }
       }
     },
     "error": {
-      "cannot_connect": "Konnte Regions-/Anbieterdaten nicht von themoviedb.org laden, nutze eine Fallback-Liste."
+      "cannot_connect": "Konnte Regions-/Anbieterdaten nicht von themoviedb.org laden, nutze eine Fallback-Liste.",
+      "too_many_persons": "Es können höchstens 4 Personen gewählt werden."
     }
   },
   "entity": {

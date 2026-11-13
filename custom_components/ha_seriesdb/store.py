@@ -74,6 +74,7 @@ class TMDBStore:
             "episodes": existing.get("episodes", {}),
             "watched": existing.get("watched", {}),
             "archived": existing.get("archived", False),
+            "persons": existing.get("persons", []),
             "watch_providers": existing.get("watch_providers"),
         }
         await self._async_save()
@@ -172,6 +173,14 @@ class TMDBStore:
         if series is None:
             return
         series["archived"] = bool(archived)
+        await self._async_save()
+
+    async def async_set_persons(self, series_id: str, persons: list[str]) -> None:
+        """Speichert die `person.*`-Entitäten, für die die Serie vorgemerkt ist."""
+        series = self._data["series"].get(str(series_id))
+        if series is None:
+            return
+        series["persons"] = list(dict.fromkeys(persons))
         await self._async_save()
 
     # -- Streaming-Verfügbarkeit -------------------------------------------

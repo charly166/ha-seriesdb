@@ -14,7 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from .api import TMDBError
-from .const import CONF_PROVIDER_IDS, DEFAULT_REGION, CONF_REGION, DOMAIN
+from .const import CONF_PERSON_IDS, CONF_PROVIDER_IDS, DEFAULT_REGION, CONF_REGION, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,6 +32,26 @@ def _configured_provider_ids(entry_data: dict) -> set[int]:
     if entry is None:
         return set()
     return set(entry.options.get(CONF_PROVIDER_IDS, []))
+
+
+def _configured_persons(hass: HomeAssistant, entry_data: dict) -> list[dict]:
+    """Die im Options-Flow gewählten Personen mit Name und Foto (nur wenn vorhanden)."""
+    entry = entry_data.get("entry")
+    if entry is None:
+        return []
+    persons = []
+    for entity_id in entry.options.get(CONF_PERSON_IDS, []):
+        state = hass.states.get(entity_id)
+        if state is None:
+            continue
+        persons.append(
+            {
+                "entity_id": entity_id,
+                "name": state.attributes.get("friendly_name") or entity_id,
+                "picture": state.attributes.get("entity_picture"),
+            }
+        )
+    return persons
 
 
 def _available_on(series: dict, provider_ids: set[int]) -> list[str]:
@@ -88,9 +108,11 @@ async def ws_list_tracked(hass: HomeAssistant, connection: websocket_api.ActiveC
             {
                 "series_id": series_id,
                 "name": series.get("name"),
+                "overview": series.get("overview"),
                 "image": series.get("image"),
                 "status": series.get("status"),
                 "network": series.get("network"),
+                "persons": series.get("persons", []),
                 "total_episodes": progress["total"],
                 "watched_episodes": progress["watched"],
                 "open_episodes": open_episodes,
@@ -135,6 +157,7 @@ async def ws_get_series(hass: HomeAssistant, connection: websocket_api.ActiveCon
             "network": series.get("network"),
             "episodes": episodes,
             "archived": series.get("archived", False),
+            "persons": series.get("persons", []),
             "watch_providers": series.get("watch_providers"),
             "available_on": _available_on(series, provider_ids),
         },
@@ -237,7 +260,7 @@ async def ws_get_settings(hass: HomeAssistant, connection: websocket_api.ActiveC
     """
     entry_data = _get_entry_data(hass)
     if entry_data is None:
-        connection.send_result(msg["id"], {"region": DEFAULT_REGION, "providers": []})
+        connection.send_result(msg["id"], {"region": DEFAULT_REGION, "providers": [], "persons": []})
         return
     entry = entry_data["entry"]
     region = entry.options.get(CONF_REGION, DEFAULT_REGION)
@@ -259,7 +282,10 @@ async def ws_get_settings(hass: HomeAssistant, connection: websocket_api.ActiveC
                 )
             )
 
-    connection.send_result(msg["id"], {"region": region, "providers": providers})
+    connection.send_result(
+        msg["id"],
+        {"region": region, "providers": providers, "persons": _configured_persons(hass, entry_data)},
+    )
 
 
 @websocket_api.websocket_command(
@@ -326,6 +352,30 @@ async def ws_set_archived(hass: HomeAssistant, connection: websocket_api.ActiveC
     connection.send_result(msg["id"], {"ok": True})
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/set_persons",
+        vol.Required("series_id"): str,
+        vol.Required("persons"): [str],
+    }
+)
+@websocket_api.async_response
+async def ws_set_persons(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict) -> None:
+    entry_data = _get_entry_data(hass)
+    if entry_data is None:
+        connection.send_error(msg["id"], "not_configured", "Integration ist nicht eingerichtet.")
+        return
+    store = entry_data["store"]
+    if not store.is_tracked(msg["series_id"]):
+        connection.send_error(msg["id"], "not_found", "Serie wird nicht verfolgt.")
+        return
+    allowed = {p["entity_id"] for p in _configured_persons(hass, entry_data)}
+    persons = [p for p in msg["persons"] if p in allowed]
+    await store.async_set_persons(msg["series_id"], persons)
+    entry_data["coordinator"].async_update_listeners()
+    connection.send_result(msg["id"], {"persons": store.get_series(msg["series_id"])["persons"]})
+
+
 def async_register_commands(hass: HomeAssistant) -> None:
     """Registriert alle WebSocket-Befehle (nur einmal global nötig)."""
     websocket_api.async_register_command(hass, ws_search)
@@ -339,3 +389,4 @@ def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_add_series)
     websocket_api.async_register_command(hass, ws_remove_series)
     websocket_api.async_register_command(hass, ws_set_archived)
+    websocket_api.async_register_command(hass, ws_set_persons)

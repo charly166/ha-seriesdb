@@ -50,6 +50,18 @@ Architektur, aber für Filme statt Serien.
   (Streaming-Verfügbarkeit ist länderspezifisch) sowie die tatsächlich
   abonnierten Dienste unter Einstellungen → Geräte & Dienste → HA SeriesDB
   → Konfigurieren auswählen
+- **Serien für Personen vormerken**: In den Optionen werden bis zu 4
+  Home-Assistant-Personen gewählt; ihre Avatare erscheinen dann auf jedem
+  Poster (grau = nicht vorgemerkt, farbig = vorgemerkt, Klick schaltet um)
+  und dienen als Filter für die Listen. Nur sichtbar, wenn mehr als eine
+  Person gewählt ist. Als Sensorattribut `persons` verfügbar
+- **Spalten**: kleiner Umschalter (Auto, 1, 2, 3) über den Listen, wird pro
+  Browser gemerkt. 1 Spalte ist eine Listenansicht mit Poster und
+  Beschreibung; ein Klick aufs Poster öffnet es dort in voller Größe. Die
+  Kartenoption `columns` legt die Voreinstellung fest
+- **Postergröße**: Kartenoption `poster_size` (`small`, `medium`, `large`) für
+  die Vorschaubilder in den Listen. Die Detailansicht zeigt ein größeres
+  Poster; ein Klick darauf öffnet es in voller Größe
 - Kartenbreite **und -höhe** in modernen "Sections"-Dashboards per Ziehen
   anpassbar, füllt dabei exakt die zugewiesene Rasterzelle aus
 - Eigenes Icon/Logo in "Einstellungen → Geräte & Dienste" (Home Assistant
@@ -64,8 +76,8 @@ Architektur, aber für Filme statt Serien.
   verfügbar wird"
 - Services für Automationen: `add_series`,
   `remove_series`, `mark_episode_watched`, `mark_episode_unwatched`,
-  `mark_watched_up_to`, `mark_season_watched`, `set_archived`, `refresh`,
-  `refresh_watch_providers`
+  `mark_watched_up_to`, `mark_season_watched`, `set_archived`, `set_persons`,
+  `refresh`, `refresh_watch_providers`
 - Alle Daten (Watchlist + Sehstatus + Archiv) werden lokal in Home Assistant
   gespeichert (`.storage/ha_seriesdb_data`) – kein Cloud-Konto nötig,
   außer dem kostenlosen TMDB-API-Key.
@@ -169,6 +181,12 @@ lässt sich einstellen:
   live von TMDB geladenen Anbieterliste für deine gewählte Region. Diese
   werden in der Serien-Detailansicht hervorgehoben und speisen das
   `available_on`-Sensorattribut.
+- **Personen**: bis zu 4 Home-Assistant-Personen, für die Serien vorgemerkt
+  werden können (z.B. zwei Personen mit einer gemeinsamen Watchlist). Sobald
+  mehr als eine Person gewählt ist, erscheinen ihre Avatare auf den Postern
+  und in der Detailansicht; ein Klick auf den Avatar merkt die Serie vor oder
+  hebt die Vormerkung auf, über die Avatar-Leiste über der Liste werden nur
+  die Serien einer Person angezeigt.
 
 Ein Regionswechsel wirkt sich vollständig erst beim nächsten Öffnen dieses
 Dialogs aus (die während des aktuellen Formulars angezeigte Anbieterliste

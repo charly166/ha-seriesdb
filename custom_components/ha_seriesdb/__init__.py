@@ -16,6 +16,7 @@ from .api import TMDBAuthError, TMDBClient, TMDBError, tmdb_language
 from .const import (
     ATTR_ARCHIVED,
     ATTR_EPISODE_ID,
+    ATTR_PERSONS,
     ATTR_SEASON_NUMBER,
     ATTR_SERIES_ID,
     ATTR_WATCHED,
@@ -35,6 +36,7 @@ from .const import (
     SERVICE_REFRESH_WATCH_PROVIDERS,
     SERVICE_REMOVE_SERIES,
     SERVICE_SET_ARCHIVED,
+    SERVICE_SET_PERSONS,
     SIGNAL_SERIES_ADDED,
     SIGNAL_SERIES_REMOVED,
     STATIC_BASE_PATH,
@@ -178,6 +180,13 @@ def _async_register_services(hass: HomeAssistant) -> None:
         else:
             await data["coordinator"].async_request_refresh()
 
+    async def _handle_set_persons(call: ServiceCall) -> None:
+        data = _entry_data()
+        await data["store"].async_set_persons(
+            str(call.data[ATTR_SERIES_ID]), list(call.data[ATTR_PERSONS])
+        )
+        data["coordinator"].async_update_listeners()
+
     async def _handle_set_archived(call: ServiceCall) -> None:
         await _entry_data()["store"].async_set_archived(
             str(call.data[ATTR_SERIES_ID]), bool(call.data.get(ATTR_ARCHIVED, True))
@@ -246,6 +255,17 @@ def _async_register_services(hass: HomeAssistant) -> None:
             {
                 vol.Required(ATTR_SERIES_ID): cv.string,
                 vol.Optional(ATTR_ARCHIVED, default=True): cv.boolean,
+            }
+        ),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_PERSONS,
+        _handle_set_persons,
+        schema=vol.Schema(
+            {
+                vol.Required(ATTR_SERIES_ID): cv.string,
+                vol.Required(ATTR_PERSONS): vol.All(cv.ensure_list, [cv.entity_id]),
             }
         ),
     )

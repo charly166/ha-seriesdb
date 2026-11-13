@@ -29,15 +29,17 @@
     "step": {
       "init": {
         "title": "HA SeriesDB settings",
-        "description": "Choose the region used for streaming availability and your own subscribed providers. Changing the region takes full effect the next time you open this dialog.",
+        "description": "Choose the region used for streaming availability, your own subscribed providers and up to 4 people the series can be tagged for. The people are shown on the posters only when more than one is selected. Changing the region takes full effect the next time you open this dialog.",
         "data": {
           "region": "Region",
-          "provider_ids": "My streaming providers"
+          "provider_ids": "My streaming providers",
+          "person_ids": "People"
         }
       }
     },
     "error": {
-      "cannot_connect": "Could not load region/provider data from themoviedb.org, using a fallback list."
+      "cannot_connect": "Could not load region/provider data from themoviedb.org, using a fallback list.",
+      "too_many_persons": "You can select at most 4 people."
     }
   },
   "entity": {

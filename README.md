@@ -45,6 +45,17 @@ built on the same architecture, but for movies instead of TV shows.
 - **Configurable region and own streaming providers**: choose your country
   (streaming availability is region-specific) and the services you actually
   subscribe to under Settings → Devices & Services → HA SeriesDB → Configure
+- **Tag shows for people**: choose up to 4 Home Assistant persons in the
+  options; their avatars then appear on every poster (grey = not tagged,
+  colored = tagged, click to toggle) and can be used to filter the lists.
+  Shown only when more than one person is selected. Exposed as the `persons`
+  sensor attribute
+- **Columns**: small switch (Auto, 1, 2, 3) above the lists, remembered per
+  browser. 1 column is a list view with poster and description; clicking the
+  poster there opens it full size. The card option `columns` sets the default
+- **Poster size**: card option `poster_size` (`small`, `medium`, `large`) for
+  the thumbnails in the lists. The detail view shows a larger poster; click it
+  to open it full size
 - Card width **and height** are resizable by dragging in modern "Sections"
   dashboards, filling exactly the assigned grid cell
 - Own icon/logo under Settings → Devices & Services (Home Assistant 2026.3+)
@@ -56,7 +67,8 @@ built on the same architecture, but for movies instead of TV shows.
   Netflix"
 - Services for automations: `add_series`, `remove_series`,
   `mark_episode_watched`, `mark_episode_unwatched`, `mark_watched_up_to`,
-  `mark_season_watched`, `set_archived`, `refresh`, `refresh_watch_providers`
+  `mark_season_watched`, `set_archived`, `set_persons`, `refresh`,
+  `refresh_watch_providers`
 - All data (watchlist, watched status, archive) is stored locally in Home
   Assistant (`.storage/ha_seriesdb_data`) – no cloud account needed beyond
   the free TMDB API key
@@ -151,6 +163,11 @@ SeriesDB" → enter your API key.
   (Netflix, Disney+, Prime Video, ...), picked from TMDB's live, up-to-date
   provider list for your chosen region. These are highlighted in the show
   detail view and drive the `available_on` sensor attribute.
+- **People**: up to 4 Home Assistant persons that shows can be tagged for
+  (e.g. two people sharing one watchlist). With more than one person
+  selected, their avatars appear on the posters and in the detail view;
+  click an avatar to tag or untag a show, and use the avatar row above the
+  list to show only one person's shows.
 
 Changing the region takes full effect the next time you reopen this dialog
 (the provider list shown while you're still on the form reflects the region

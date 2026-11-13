@@ -109,6 +109,7 @@ class TMDBSeriesSensor(CoordinatorEntity[TMDBCoordinator], SensorEntity):
             "image": series.get("image"),
             "next_unwatched_episode": next_episode,
             "archived": series.get("archived", False),
+            "persons": series.get("persons", []),
             "available_on": self._available_on(series),
         }
 

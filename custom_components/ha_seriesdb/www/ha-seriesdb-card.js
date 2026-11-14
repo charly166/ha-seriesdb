@@ -778,7 +778,7 @@ class HaSeriesDbCard extends HTMLElement {
     this._selectedSeriesId = null;
     this._detail = null;
     this._settings = { region: "", providers: [], persons: [] };
-    this._personFilter = null;
+    this._personFilter = [];
     this._posterOverlay = false;
     this._columns = null;
     this._collapsedSeasons = new Set();
@@ -1445,9 +1445,11 @@ class HaSeriesDbCard extends HTMLElement {
     if (this._persons().length) {
       toolbar.appendChild(
         this._renderPersonAvatars(
-          this._personFilter ? [this._personFilter] : [],
+          this._personFilter,
           (id) => {
-            this._personFilter = this._personFilter === id ? null : id;
+            this._personFilter = this._personFilter.includes(id)
+              ? this._personFilter.filter((x) => x !== id)
+              : [...this._personFilter, id];
             this._render();
           },
           "persons-filter"
@@ -1461,8 +1463,10 @@ class HaSeriesDbCard extends HTMLElement {
     if (needle) {
       list = list.filter((s) => (s.name || "").toLowerCase().includes(needle));
     }
-    if (this._personFilter) {
-      list = list.filter((s) => (s.persons || []).includes(this._personFilter));
+    if (this._personFilter.length) {
+      list = list.filter((s) =>
+        this._personFilter.every((p) => (s.persons || []).includes(p))
+      );
     }
     if (!list.length) {
       const empty = this._el("div", "empty");

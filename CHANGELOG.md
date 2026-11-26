@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.5
+
+- Added French translation for the card and for the setup and options dialogs,
+  based on the French translation contributed to HA MoviesDB by @Glin76.
+
 ## 2.5.2
 
 - Bumped the card resource version so browsers reload the updated card instead

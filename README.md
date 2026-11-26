@@ -59,7 +59,7 @@ built on the same architecture, but for movies instead of TV shows.
 - Card width **and height** are resizable by dragging in modern "Sections"
   dashboards, filling exactly the assigned grid cell
 - Own icon/logo under Settings → Devices & Services (Home Assistant 2026.3+)
-- Card UI in **English and German**, following the language of the logged-in
+- Card UI in **English, German and French**, following the language of the logged-in
   Home Assistant user (other languages fall back to English)
 - A sensor entity per tracked show (watch progress, next unwatched episode,
   and `available_on` list of your own providers currently streaming it) for
@@ -294,13 +294,15 @@ automation:
   parameter on every request – no separate login/token refresh needed.
 - Episodes are fetched one season at a time (`/tv/{id}/season/{n}`), since
   TMDB doesn't offer a single "all episodes of this show" endpoint.
-- **Languages:** The card UI is available in English and German and follows
+- **Languages:** The card UI is available in English, German and French and follows
   the language of the logged-in Home Assistant user (all other languages fall
   back to English). Further languages can be added without touching any code:
-  put a `<lang>.json` file (e.g. `fr.json`) into
+  put a `<lang>.json` file (e.g. `es.json`) into
   `custom_components/ha_seriesdb/www/translations/`, using the keys from the `en`
   block at the top of `ha-seriesdb-card.js` – missing keys fall back to English. Pull
-  requests with new languages are welcome. Titles and descriptions are
+  requests with new languages are welcome. The setup and options dialogs are
+  translated separately, in `custom_components/ha_seriesdb/translations/<lang>.json`
+  (same structure as `en.json`). Titles and descriptions are
   requested from TMDB in the Home Assistant language (see below).
 - Titles, descriptions, posters and episode names are requested from TMDB in
   the language configured in Home Assistant (e.g. `de` -> `de-DE`, `en` ->

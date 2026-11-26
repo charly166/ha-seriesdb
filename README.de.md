@@ -66,7 +66,7 @@ Architektur, aber für Filme statt Serien.
   anpassbar, füllt dabei exakt die zugewiesene Rasterzelle aus
 - Eigenes Icon/Logo in "Einstellungen → Geräte & Dienste" (Home Assistant
   2026.3+)
-- Kartenoberfläche auf **Deutsch und Englisch**, abhängig von der Sprache des
+- Kartenoberfläche auf **Deutsch, Englisch und Französisch**, abhängig von der Sprache des
   angemeldeten Home-Assistant-Benutzers (andere Sprachen fallen auf Englisch
   zurück)
 - Eine Sensor-Entität pro verfolgter Serie (Sehfortschritt, nächste
@@ -337,13 +337,16 @@ automation:
 - Episoden werden pro Staffel einzeln abgerufen
   (`/tv/{id}/season/{n}`), da TMDB Episodenlisten nicht als eine
   Gesamtabfrage über die ganze Serie anbietet.
-- **Sprachen:** Die Kartenoberfläche gibt es auf Deutsch und Englisch; sie
+- **Sprachen:** Die Kartenoberfläche gibt es auf Deutsch, Englisch und Französisch; sie
   folgt der Sprache des angemeldeten Home-Assistant-Benutzers (alle anderen
   Sprachen fallen auf Englisch zurück). Weitere Sprachen lassen sich ohne
-  Codeänderung ergänzen: eine Datei `<sprache>.json` (z.B. `fr.json`) unter
+  Codeänderung ergänzen: eine Datei `<sprache>.json` (z.B. `es.json`) unter
   `custom_components/ha_seriesdb/www/translations/` ablegen, mit den Schlüsseln
   aus dem `en`-Block am Anfang von `ha-seriesdb-card.js` – fehlende Schlüssel fallen auf
-  Englisch zurück. Pull Requests mit neuen Sprachen sind willkommen. Titel und
+  Englisch zurück. Pull Requests mit neuen Sprachen sind willkommen. Einrichtungs- und
+  Options-Dialog werden getrennt übersetzt, in
+  `custom_components/ha_seriesdb/translations/<sprache>.json` (gleiche Struktur
+  wie `en.json`). Titel und
   Beschreibungen werden von TMDB in der Home-Assistant-Sprache abgefragt (siehe
   unten).
 - Titel, Beschreibungen, Poster und Episodennamen werden von TMDB in der in
